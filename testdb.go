@@ -1,66 +1,66 @@
 package testdb
 
 import (
+	"bytes"
 	"database/sql/driver"
-  "encoding/csv"
-  "strings"
-  "io"
-  "bytes"
-  "errors"
+	"encoding/csv"
+	"errors"
+	"io"
+	"strings"
 )
 
 type opener func(dsn string) (driver.Conn, error)
 
 type Driver struct {
-  open opener
-  conn *Conn
+	open opener
+	conn *Conn
 }
 
 func (d *Driver) Open(dsn string) (driver.Conn, error) {
-  if d.open != nil {
-    conn, err := d.open(dsn)
-    return conn, err
-  }
+	if d.open != nil {
+		conn, err := d.open(dsn)
+		return conn, err
+	}
 
-  if d.conn == nil {
-    d.conn = NewConn()
-  }
+	if d.conn == nil {
+		d.conn = NewConn()
+	}
 
-  return d.conn, nil
+	return d.conn, nil
 }
 
 func (d *Driver) SetOpen(f opener) {
-  d.open = f
+	d.open = f
 }
 
-func (d *Driver) SetConnection(conn *Conn){
-  d.conn = conn
+func (d *Driver) SetConnection(conn *Conn) {
+	d.conn = conn
 }
 
 type Conn struct {
-  queries map[string]Query
+	queries map[string]Query
 }
 
-func NewConn() (*Conn){
-  return &Conn{
-    queries: make(map[string]Query),
-  }
+func NewConn() *Conn {
+	return &Conn{
+		queries: make(map[string]Query),
+	}
 }
 
-func (c *Conn) StubQuery(query string, result driver.Rows){
-  c.queries[query] = Query{
-    result: result,
-  }
+func (c *Conn) StubQuery(query string, result driver.Rows) {
+	c.queries[query] = Query{
+		result: result,
+	}
 }
 
 func (c *Conn) Prepare(query string) (driver.Stmt, error) {
-  if q, ok := c.queries[query]; ok {
-    return &Stmt{
-      result: q.result,
-    }, nil
-  }
+	if q, ok := c.queries[query]; ok {
+		return &Stmt{
+			result: q.result,
+		}, nil
+	}
 
-  return &Stmt{}, errors.New("Query not stubbed: " + query)
+	return &Stmt{}, errors.New("Query not stubbed: " + query)
 }
 
 func (*Conn) Close() error {
@@ -72,11 +72,11 @@ func (*Conn) Begin() (driver.Tx, error) {
 }
 
 func (c *Conn) Exec(query string, args []driver.Value) (driver.Result, error) {
-  return nil, nil
+	return nil, nil
 }
 
 type Stmt struct {
-  result driver.Rows
+	result driver.Rows
 }
 
 func (*Stmt) Close() error {
@@ -107,10 +107,10 @@ func (*Tx) Rollback() error {
 }
 
 type Rows struct {
-  closed bool
-  columns []string
-  rows [][]string
-  pos int
+	closed  bool
+	columns []string
+	rows    [][]string
+	pos     int
 }
 
 func (rs *Rows) Next(dest []driver.Value) error {
@@ -119,48 +119,47 @@ func (rs *Rows) Next(dest []driver.Value) error {
 		return io.EOF // per interface spec
 	}
 
-  for i, col := range rs.rows[rs.pos-1] {
-    b := bytes.NewBufferString(col)
+	for i, col := range rs.rows[rs.pos-1] {
+		b := bytes.NewBufferString(col)
 
-    dest[i] = b.Bytes()
-  }
+		dest[i] = b.Bytes()
+	}
 
-  return nil
+	return nil
 }
 
 func (rs *Rows) Err() error {
-  return nil
+	return nil
 }
 
-func (rs *Rows) Columns() ([]string) {
-  return rs.columns
+func (rs *Rows) Columns() []string {
+	return rs.columns
 }
 
 func (rs *Rows) Scan(dest ...interface{}) error {
-  return nil
+	return nil
 }
 
 func (rs *Rows) Close() error {
-  return nil
+	return nil
 }
 
 type Value struct {
 }
 
 type Query struct {
-  result driver.Rows
+	result driver.Rows
 }
 
+func RowsFromCSVString(columns []string, s string) driver.Rows {
+	rows := &Rows{
+		columns: columns,
+	}
 
-func RowsFromCSVString(columns []string, s string) (driver.Rows){
-  rows := &Rows{
-    columns: columns,
-  }
+	r := strings.NewReader(strings.TrimSpace(s))
+	csvReader := csv.NewReader(r)
 
-  r := strings.NewReader(strings.TrimSpace(s))
-  csvReader := csv.NewReader(r)
+	rows.rows, _ = csvReader.ReadAll()
 
-  rows.rows, _ = csvReader.ReadAll()
-
-  return rows
+	return rows
 }
