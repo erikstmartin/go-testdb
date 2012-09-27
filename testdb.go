@@ -53,10 +53,17 @@ func (c *Conn) StubQuery(query string, result driver.Rows) {
 	}
 }
 
+func (c *Conn) StubQueryError(query string, err error) {
+	c.queries[query] = Query{
+		err: err,
+	}
+}
+
 func (c *Conn) Prepare(query string) (driver.Stmt, error) {
 	if q, ok := c.queries[query]; ok {
 		return &Stmt{
 			result: q.result,
+			err:    q.err,
 		}, nil
 	}
 
@@ -77,6 +84,7 @@ func (c *Conn) Exec(query string, args []driver.Value) (driver.Result, error) {
 
 type Stmt struct {
 	result driver.Rows
+	err    error
 }
 
 func (*Stmt) Close() error {
@@ -92,7 +100,7 @@ func (*Stmt) Exec(args []driver.Value) (driver.Result, error) {
 }
 
 func (s *Stmt) Query(args []driver.Value) (driver.Rows, error) {
-	return s.result, nil
+	return s.result, s.err
 }
 
 type Tx struct {
@@ -149,6 +157,7 @@ type Value struct {
 
 type Query struct {
 	result driver.Rows
+	err    error
 }
 
 func RowsFromCSVString(columns []string, s string) driver.Rows {

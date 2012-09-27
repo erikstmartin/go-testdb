@@ -56,6 +56,10 @@ func TestStubQuery(t *testing.T) {
 
 	res, err := db.Query(sql)
 
+	if err != nil {
+		t.Fatal("stubbed query should not return error")
+	}
+
 	if res.Next() {
 		var count int64
 		err = res.Scan(&count)
@@ -81,5 +85,25 @@ func TestUnknownQuery(t *testing.T) {
 	if err == nil {
 		t.Fatal("Unknown queries should fail")
 	}
+}
 
+func TestStubQueryError(t *testing.T) {
+	conn := NewConn()
+
+	d.SetConnection(conn)
+	db, _ := sql.Open("testdb", "")
+
+	sql := "select count(*) from error"
+
+	conn.StubQueryError(sql, errors.New("test error"))
+
+	res, err := db.Query(sql)
+
+	if err == nil {
+		t.Fatal("failed to return error from stubbed query")
+	}
+
+	if res != nil {
+		t.Fatal("result should be nil on error")
+	}
 }
