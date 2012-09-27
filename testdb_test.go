@@ -107,3 +107,51 @@ func TestStubQueryError(t *testing.T) {
 		t.Fatal("result should be nil on error")
 	}
 }
+
+type user struct {
+	id   int64
+	name string
+	age  int64
+}
+
+func TestStubQueryMultipleResult(t *testing.T) {
+	conn := NewConn()
+
+	d.SetConnection(conn)
+	db, _ := sql.Open("testdb", "")
+
+	sql := "select id, name, age from users"
+	columns := []string{"id", "name", "age"}
+	result := `
+  1,tim,20
+  2,joe,25
+  3,bob,30
+  `
+	conn.StubQuery(sql, RowsFromCSVString(columns, result))
+
+	res, err := db.Query(sql)
+
+	if err != nil {
+		t.Fatal("stubbed query should not return error")
+	}
+
+	i := 0
+
+	for res.Next() {
+		var u = user{}
+		err = res.Scan(&u.id, &u.name, &u.age)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if u.id == 0 || u.name == "" || u.age == 0 {
+			t.Fatal("failed to populate object with result")
+		}
+		i++
+	}
+
+	if i != 3 {
+		t.Fatal("failed to return proper number of results")
+	}
+}

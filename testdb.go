@@ -123,7 +123,9 @@ type Rows struct {
 
 func (rs *Rows) Next(dest []driver.Value) error {
 	rs.pos++
-	if rs.pos >= len(rs.rows) {
+	if rs.pos > len(rs.rows) {
+		rs.closed = true
+
 		return io.EOF // per interface spec
 	}
 
@@ -144,15 +146,8 @@ func (rs *Rows) Columns() []string {
 	return rs.columns
 }
 
-func (rs *Rows) Scan(dest ...interface{}) error {
-	return nil
-}
-
 func (rs *Rows) Close() error {
 	return nil
-}
-
-type Value struct {
 }
 
 type Query struct {
@@ -163,12 +158,25 @@ type Query struct {
 func RowsFromCSVString(columns []string, s string) driver.Rows {
 	rows := &Rows{
 		columns: columns,
+		closed:  false,
 	}
 
 	r := strings.NewReader(strings.TrimSpace(s))
 	csvReader := csv.NewReader(r)
 
-	rows.rows, _ = csvReader.ReadAll()
+	for {
+		r, err := csvReader.Read()
+
+		if err != nil || r == nil {
+			break
+		}
+
+		for i, v := range r {
+			r[i] = strings.TrimSpace(v)
+		}
+
+		rows.rows = append(rows.rows, r)
+	}
 
 	return rows
 }
