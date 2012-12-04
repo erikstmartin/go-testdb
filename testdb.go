@@ -2,10 +2,12 @@ package testdb
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"database/sql/driver"
 	"encoding/csv"
 	"errors"
 	"io"
+	"regexp"
 	"strings"
 )
 
@@ -47,20 +49,32 @@ func NewConn() *Conn {
 	}
 }
 
+var whitespaceRegexp = regexp.MustCompile("\\s")
+
+func (c *Conn) getQueryHash(query string) string {
+	// Remove whitespace and lowercase to make stubbing less brittle
+	query = strings.ToLower(whitespaceRegexp.ReplaceAllString(query, ""))
+
+	h := sha1.New()
+	io.WriteString(h, query)
+
+	return string(h.Sum(nil))
+}
+
 func (c *Conn) StubQuery(query string, result driver.Rows) {
-	c.queries[query] = Query{
+	c.queries[c.getQueryHash(query)] = Query{
 		result: result,
 	}
 }
 
 func (c *Conn) StubQueryError(query string, err error) {
-	c.queries[query] = Query{
+	c.queries[c.getQueryHash(query)] = Query{
 		err: err,
 	}
 }
 
 func (c *Conn) Prepare(query string) (driver.Stmt, error) {
-	if q, ok := c.queries[query]; ok {
+	if q, ok := c.queries[c.getQueryHash(query)]; ok {
 		return &Stmt{
 			result: q.result,
 			err:    q.err,

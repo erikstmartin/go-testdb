@@ -74,6 +74,74 @@ func TestStubQuery(t *testing.T) {
 	}
 }
 
+func TestStubQueryAdditionalWhitespace(t *testing.T) {
+	conn := NewConn()
+
+	d.SetConnection(conn)
+	db, _ := sql.Open("testdb", "")
+
+	sqlWhitespace := "select count(*) from              foo"
+	sql := "select count(*) from foo"
+	columns := []string{"count"}
+	result := `
+  5
+  `
+	conn.StubQuery(sqlWhitespace, RowsFromCSVString(columns, result))
+
+	res, err := db.Query(sql)
+
+	if err != nil {
+		t.Fatal("stubbed query should not return error")
+	}
+
+	if res.Next() {
+		var count int64
+		err = res.Scan(&count)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if count != 5 {
+			t.Fatal("failed to return count")
+		}
+	}
+}
+
+func TestStubQueryChangeCase(t *testing.T) {
+	conn := NewConn()
+
+	d.SetConnection(conn)
+	db, _ := sql.Open("testdb", "")
+
+	sqlCase := "SELECT COUNT(*) FROM foo"
+	sql := "select count(*) from foo"
+	columns := []string{"count"}
+	result := `
+  5
+  `
+	conn.StubQuery(sqlCase, RowsFromCSVString(columns, result))
+
+	res, err := db.Query(sql)
+
+	if err != nil {
+		t.Fatal("stubbed query should not return error")
+	}
+
+	if res.Next() {
+		var count int64
+		err = res.Scan(&count)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if count != 5 {
+			t.Fatal("failed to return count")
+		}
+	}
+}
+
 func TestUnknownQuery(t *testing.T) {
 	conn := NewConn()
 	d.SetConnection(conn)
