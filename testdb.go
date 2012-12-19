@@ -185,14 +185,14 @@ func RowsFromCSVString(columns []string, s string) driver.Rows {
 			break
 		}
 
-    row := make([]driver.Value, len(columns))
+		row := make([]driver.Value, len(columns))
 
 		for i, v := range r {
 			v := strings.TrimSpace(v)
 
 			if timeRegex.MatchString(v) {
-				t,_ := time.Parse("2006-01-02 15:04:00", v)
-        row[i] = t
+				t, _ := time.Parse("2006-01-02 15:04:05", v)
+				row[i] = t
 			} else {
 				row[i] = v
 			}
