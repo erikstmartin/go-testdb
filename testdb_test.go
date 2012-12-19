@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"testing"
+	"time"
 )
 
 var d *Driver
@@ -177,9 +178,10 @@ func TestStubQueryError(t *testing.T) {
 }
 
 type user struct {
-	id   int64
-	name string
-	age  int64
+	id      int64
+	name    string
+	age     int64
+	created time.Time
 }
 
 func TestStubQueryMultipleResult(t *testing.T) {
@@ -189,11 +191,11 @@ func TestStubQueryMultipleResult(t *testing.T) {
 	db, _ := sql.Open("testdb", "")
 
 	sql := "select id, name, age from users"
-	columns := []string{"id", "name", "age"}
+	columns := []string{"id", "name", "age", "created"}
 	result := `
-  1,tim,20
-  2,joe,25
-  3,bob,30
+  1,tim,20,2012-10-01 05:00:00
+  2,joe,25,2012-10-02 06:00:00
+  3,bob,30,2012-10-02 07:00:00
   `
 	conn.StubQuery(sql, RowsFromCSVString(columns, result))
 
@@ -207,7 +209,7 @@ func TestStubQueryMultipleResult(t *testing.T) {
 
 	for res.Next() {
 		var u = user{}
-		err = res.Scan(&u.id, &u.name, &u.age)
+		err = res.Scan(&u.id, &u.name, &u.age, &u.created)
 
 		if err != nil {
 			t.Fatal(err)
