@@ -40,7 +40,8 @@ func (d *Driver) SetConnection(conn *Conn) {
 }
 
 type Conn struct {
-	queries map[string]Query
+	queries   map[string]Query
+	queryFunc func(query string) (result driver.Rows, err error)
 }
 
 func NewConn() *Conn {
@@ -50,6 +51,10 @@ func NewConn() *Conn {
 }
 
 var whitespaceRegexp = regexp.MustCompile("\\s")
+
+func (c *Conn) SetQueryFunc(f func(query string) (result driver.Rows, err error)) {
+	c.queryFunc = f
+}
 
 func (c *Conn) getQueryHash(query string) string {
 	// Remove whitespace and lowercase to make stubbing less brittle
@@ -74,6 +79,15 @@ func (c *Conn) StubQueryError(query string, err error) {
 }
 
 func (c *Conn) Prepare(query string) (driver.Stmt, error) {
+	if c.queryFunc != nil {
+		result, err := c.queryFunc(query)
+
+		return &Stmt{
+			result: result,
+			err:    err,
+		}, nil
+	}
+
 	if q, ok := c.queries[c.getQueryHash(query)]; ok {
 		return &Stmt{
 			result: q.result,

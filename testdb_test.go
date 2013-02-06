@@ -268,3 +268,56 @@ func TestStubQueryMultipleResultNewline(t *testing.T) {
 		t.Fatal("failed to return proper number of results")
 	}
 }
+
+func TestSetQueryFunc(t *testing.T) {
+	columns := []string{"id", "name", "age", "created"}
+	rows := "1,tim,20,2012-10-01 01:00:01\n2,joe,25,2012-10-02 02:00:02\n3,bob,30,2012-10-03 03:00:03"
+
+	conn := NewConn()
+	conn.SetQueryFunc(func(query string) (result driver.Rows, err error) {
+		return RowsFromCSVString(columns, rows), nil
+	})
+
+	d.SetConnection(conn)
+	db, _ := sql.Open("testdb", "")
+
+	res, err := db.Query("SELECT foo FROM bar")
+
+	i := 0
+
+	for res.Next() {
+		var u = user{}
+		err = res.Scan(&u.id, &u.name, &u.age, &u.created)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		ti := time.Date(2012, 10, i+1, i+1, 0, i+1, 0, time.UTC)
+
+		if u.id == 0 || u.name == "" || u.age == 0 || u.created.Unix() != ti.Unix() {
+			t.Fatal("failed to populate object with result")
+		}
+		i++
+	}
+
+	if i != 3 {
+		t.Fatal("failed to return proper number of results")
+	}
+}
+
+func TestSetQueryFuncError(t *testing.T) {
+	conn := NewConn()
+	conn.SetQueryFunc(func(query string) (result driver.Rows, err error) {
+		return nil, errors.New("stubbed error")
+	})
+
+	d.SetConnection(conn)
+	db, _ := sql.Open("testdb", "")
+
+	_, err := db.Query("SELECT foo FROM bar")
+
+	if err == nil {
+		t.Fatal("failed to return error from QueryFunc")
+	}
+}
