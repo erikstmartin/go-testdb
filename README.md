@@ -41,7 +41,7 @@ You're able to stub responses to known queries, unknown queries will trigger log
 
 Differences in whitespace, and case are ignored.
 
-For convenience a method has been created for you to take a CSV string and turn it into a database result object (__RowsFromCSVString__).
+For convenience a method has been created for you to take a CSV string and turn it into a database result object (RowsFromCSVString).
 
 <pre>
 db, _ := sql.Open("testdb", "")
