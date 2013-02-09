@@ -9,11 +9,13 @@ import (
 	"time"
 )
 
-func ExampleDriverSetOpenFunc() {
+func ExampleSetOpenFunc() {
+	defer Reset()
+
 	SetOpenFunc(func(dsn string) (driver.Conn, error) {
-		return nil, errors.New("test error")
+    // Conn() will return the same internal driver.Conn being used by the driver
+		return Conn(), errors.New("test error")
 	})
-	defer SetOpenFunc(nil)
 
 	_, err := sql.Open("testdb", "foo")
 

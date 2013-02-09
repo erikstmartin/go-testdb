@@ -14,22 +14,25 @@ import (
 
 type opener func(dsn string) (driver.Conn, error)
 
-var d *Driver
+var d *testDriver
 
 func init() {
-	d = &Driver {
-    conn: newConn(),
-  }
-
+  d = newDriver()
 	sql.Register("testdb", d)
 }
 
-type Driver struct {
+type testDriver struct {
 	open opener
 	conn *conn
 }
 
-func (d *Driver) Open(dsn string) (driver.Conn, error) {
+func newDriver()(*testDriver){
+	return &testDriver {
+    conn: newConn(),
+  }
+}
+
+func (d *testDriver) Open(dsn string) (driver.Conn, error) {
 	if d.open != nil {
 		conn, err := d.open(dsn)
 		return conn, err
@@ -43,13 +46,13 @@ func (d *Driver) Open(dsn string) (driver.Conn, error) {
 }
 
 type conn struct {
-	queries   map[string]Query
+	queries   map[string]query
 	queryFunc func(query string) (result driver.Rows, err error)
 }
 
 func newConn() *conn {
 	return &conn{
-		queries: make(map[string]Query),
+		queries: make(map[string]query),
 	}
 }
 
@@ -69,20 +72,20 @@ func (c *conn) Prepare(query string) (driver.Stmt, error) {
 	if c.queryFunc != nil {
 		result, err := c.queryFunc(query)
 
-		return &Stmt{
+		return &stmt{
 			result: result,
 			err:    err,
 		}, nil
 	}
 
 	if q, ok := d.conn.queries[getQueryHash(query)]; ok {
-		return &Stmt{
+		return &stmt{
 			result: q.result,
 			err:    q.err,
 		}, nil
 	}
 
-	return &Stmt{}, errors.New("Query not stubbed: " + query)
+	return new(stmt), errors.New("Query not stubbed: " + query)
 }
 
 func (*conn) Close() error {
@@ -90,53 +93,53 @@ func (*conn) Close() error {
 }
 
 func (*conn) Begin() (driver.Tx, error) {
-	return &Tx{}, nil
+	return &tx{}, nil
 }
 
 func (c *conn) Exec(query string, args []driver.Value) (driver.Result, error) {
 	return nil, nil
 }
 
-type Stmt struct {
+type stmt struct {
 	result driver.Rows
 	err    error
 }
 
-func (*Stmt) Close() error {
+func (*stmt) Close() error {
 	return nil
 }
 
-func (*Stmt) NumInput() int {
+func (*stmt) NumInput() int {
 	return 0
 }
 
-func (*Stmt) Exec(args []driver.Value) (driver.Result, error) {
+func (*stmt) Exec(args []driver.Value) (driver.Result, error) {
 	return nil, nil
 }
 
-func (s *Stmt) Query(args []driver.Value) (driver.Rows, error) {
+func (s *stmt) Query(args []driver.Value) (driver.Rows, error) {
 	return s.result, s.err
 }
 
-type Tx struct {
+type tx struct {
 }
 
-func (*Tx) Commit() error {
+func (*tx) Commit() error {
 	return nil
 }
 
-func (*Tx) Rollback() error {
+func (*tx) Rollback() error {
 	return nil
 }
 
-type Rows struct {
+type rows struct {
 	closed  bool
 	columns []string
 	rows    [][]driver.Value
 	pos     int
 }
 
-func (rs *Rows) Next(dest []driver.Value) error {
+func (rs *rows) Next(dest []driver.Value) error {
 	rs.pos++
 	if rs.pos > len(rs.rows) {
 		rs.closed = true
@@ -151,19 +154,19 @@ func (rs *Rows) Next(dest []driver.Value) error {
 	return nil
 }
 
-func (rs *Rows) Err() error {
+func (rs *rows) Err() error {
 	return nil
 }
 
-func (rs *Rows) Columns() []string {
+func (rs *rows) Columns() []string {
 	return rs.columns
 }
 
-func (rs *Rows) Close() error {
+func (rs *rows) Close() error {
 	return nil
 }
 
-type Query struct {
+type query struct {
 	result driver.Rows
 	err    error
 }
@@ -172,14 +175,14 @@ func SetQueryFunc(f func(query string) (result driver.Rows, err error)) {
 	d.conn.queryFunc = f
 }
 
-func StubQuery(query string, result driver.Rows) {
-	d.conn.queries[getQueryHash(query)] = Query{
+func StubQuery(q string, result driver.Rows) {
+	d.conn.queries[getQueryHash(q)] = query{
 		result: result,
 	}
 }
 
-func StubQueryError(query string, err error) {
-	d.conn.queries[getQueryHash(query)] = Query{
+func StubQueryError(q string, err error) {
+	d.conn.queries[getQueryHash(q)] = query{
 		err: err,
 	}
 }
@@ -189,7 +192,7 @@ func SetOpenFunc(f opener) {
 }
 
 func Reset(){
-  d.conn = newConn()
+  d = newDriver()
 }
 
 func Conn()(driver.Conn){
@@ -199,7 +202,7 @@ func Conn()(driver.Conn){
 var timeRegex, _ = regexp.Compile(`^\d{4}-\d{2}-\d{2}(\s\d{2}:\d{2}:\d{2})?$`)
 
 func RowsFromCSVString(columns []string, s string) driver.Rows {
-	rows := &Rows{
+	rs := &rows{
 		columns: columns,
 		closed:  false,
 	}
@@ -227,8 +230,8 @@ func RowsFromCSVString(columns []string, s string) driver.Rows {
 			}
 		}
 
-		rows.rows = append(rows.rows, row)
+		rs.rows = append(rs.rows, row)
 	}
 
-	return rows
+	return rs
 }
