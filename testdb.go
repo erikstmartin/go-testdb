@@ -2,6 +2,7 @@ package testdb
 
 import (
 	"crypto/sha1"
+	"database/sql"
 	"database/sql/driver"
 	"encoding/csv"
 	"errors"
@@ -13,9 +14,19 @@ import (
 
 type opener func(dsn string) (driver.Conn, error)
 
+var d *Driver
+
+func init() {
+	d = &Driver {
+    conn: newConn(),
+  }
+
+	sql.Register("testdb", d)
+}
+
 type Driver struct {
 	open opener
-	conn *Conn
+	conn *conn
 }
 
 func (d *Driver) Open(dsn string) (driver.Conn, error) {
@@ -25,38 +36,26 @@ func (d *Driver) Open(dsn string) (driver.Conn, error) {
 	}
 
 	if d.conn == nil {
-		d.conn = NewConn()
+		d.conn = newConn()
 	}
 
 	return d.conn, nil
 }
 
-func (d *Driver) SetOpenFunc(f opener) {
-	d.open = f
-}
-
-func (d *Driver) SetConnection(conn *Conn) {
-	d.conn = conn
-}
-
-type Conn struct {
+type conn struct {
 	queries   map[string]Query
 	queryFunc func(query string) (result driver.Rows, err error)
 }
 
-func NewConn() *Conn {
-	return &Conn{
+func newConn() *conn {
+	return &conn{
 		queries: make(map[string]Query),
 	}
 }
 
 var whitespaceRegexp = regexp.MustCompile("\\s")
 
-func (c *Conn) SetQueryFunc(f func(query string) (result driver.Rows, err error)) {
-	c.queryFunc = f
-}
-
-func (c *Conn) getQueryHash(query string) string {
+func getQueryHash(query string) string {
 	// Remove whitespace and lowercase to make stubbing less brittle
 	query = strings.ToLower(whitespaceRegexp.ReplaceAllString(query, ""))
 
@@ -66,19 +65,7 @@ func (c *Conn) getQueryHash(query string) string {
 	return string(h.Sum(nil))
 }
 
-func (c *Conn) StubQuery(query string, result driver.Rows) {
-	c.queries[c.getQueryHash(query)] = Query{
-		result: result,
-	}
-}
-
-func (c *Conn) StubQueryError(query string, err error) {
-	c.queries[c.getQueryHash(query)] = Query{
-		err: err,
-	}
-}
-
-func (c *Conn) Prepare(query string) (driver.Stmt, error) {
+func (c *conn) Prepare(query string) (driver.Stmt, error) {
 	if c.queryFunc != nil {
 		result, err := c.queryFunc(query)
 
@@ -88,7 +75,7 @@ func (c *Conn) Prepare(query string) (driver.Stmt, error) {
 		}, nil
 	}
 
-	if q, ok := c.queries[c.getQueryHash(query)]; ok {
+	if q, ok := d.conn.queries[getQueryHash(query)]; ok {
 		return &Stmt{
 			result: q.result,
 			err:    q.err,
@@ -98,15 +85,15 @@ func (c *Conn) Prepare(query string) (driver.Stmt, error) {
 	return &Stmt{}, errors.New("Query not stubbed: " + query)
 }
 
-func (*Conn) Close() error {
+func (*conn) Close() error {
 	return nil
 }
 
-func (*Conn) Begin() (driver.Tx, error) {
+func (*conn) Begin() (driver.Tx, error) {
 	return &Tx{}, nil
 }
 
-func (c *Conn) Exec(query string, args []driver.Value) (driver.Result, error) {
+func (c *conn) Exec(query string, args []driver.Value) (driver.Result, error) {
 	return nil, nil
 }
 
@@ -179,6 +166,34 @@ func (rs *Rows) Close() error {
 type Query struct {
 	result driver.Rows
 	err    error
+}
+
+func SetQueryFunc(f func(query string) (result driver.Rows, err error)) {
+	d.conn.queryFunc = f
+}
+
+func StubQuery(query string, result driver.Rows) {
+	d.conn.queries[getQueryHash(query)] = Query{
+		result: result,
+	}
+}
+
+func StubQueryError(query string, err error) {
+	d.conn.queries[getQueryHash(query)] = Query{
+		err: err,
+	}
+}
+
+func SetOpenFunc(f opener) {
+	d.open = f
+}
+
+func Reset(){
+  d.conn = newConn()
+}
+
+func Conn()(driver.Conn){
+  return d.conn
 }
 
 var timeRegex, _ = regexp.Compile(`^\d{4}-\d{2}-\d{2}(\s\d{2}:\d{2}:\d{2})?$`)
