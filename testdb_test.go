@@ -13,7 +13,7 @@ func ExampleSetOpenFunc() {
 	defer Reset()
 
 	SetOpenFunc(func(dsn string) (driver.Conn, error) {
-    // Conn() will return the same internal driver.Conn being used by the driver
+		// Conn() will return the same internal driver.Conn being used by the driver
 		return Conn(), errors.New("test error")
 	})
 
@@ -38,7 +38,7 @@ func TestSetOpenFunc(t *testing.T) {
 	}
 
 	if conn == nil {
-    t.Fatal("driver.Open not properly set: didn't connection")
+		t.Fatal("driver.Open not properly set: didn't connection")
 	}
 
 	if err.Error() != "test error" {
@@ -302,15 +302,15 @@ func TestSetQueryFuncError(t *testing.T) {
 	}
 }
 
-func TestReset(t *testing.T){
+func TestReset(t *testing.T) {
 	sql.Open("testdb", "")
 
 	sql := "select count(*) from error"
 	StubQueryError(sql, errors.New("test error"))
 
-  Reset()
+	Reset()
 
-  if len(d.conn.queries) > 0 {
-   t.Fatal("failed to reset connection")
-  }
+	if len(d.conn.queries) > 0 {
+		t.Fatal("failed to reset connection")
+	}
 }

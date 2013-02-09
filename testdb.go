@@ -17,7 +17,7 @@ type opener func(dsn string) (driver.Conn, error)
 var d *testDriver
 
 func init() {
-  d = newDriver()
+	d = newDriver()
 	sql.Register("testdb", d)
 }
 
@@ -26,10 +26,10 @@ type testDriver struct {
 	conn *conn
 }
 
-func newDriver()(*testDriver){
-	return &testDriver {
-    conn: newConn(),
-  }
+func newDriver() *testDriver {
+	return &testDriver{
+		conn: newConn(),
+	}
 }
 
 func (d *testDriver) Open(dsn string) (driver.Conn, error) {
@@ -191,12 +191,12 @@ func SetOpenFunc(f opener) {
 	d.open = f
 }
 
-func Reset(){
-  d = newDriver()
+func Reset() {
+	d = newDriver()
 }
 
-func Conn()(driver.Conn){
-  return d.conn
+func Conn() driver.Conn {
+	return d.conn
 }
 
 var timeRegex, _ = regexp.Compile(`^\d{4}-\d{2}-\d{2}(\s\d{2}:\d{2}:\d{2})?$`)
