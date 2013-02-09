@@ -20,11 +20,11 @@ func init() {
 }
 
 // Driver
-func TestSetOpen(t *testing.T) {
-	d.SetOpen(func(dsn string) (driver.Conn, error) {
+func TestSetOpenFunc(t *testing.T) {
+	d.SetOpenFunc(func(dsn string) (driver.Conn, error) {
 		return c, errors.New("test error")
 	})
-	defer d.SetOpen(nil)
+	defer d.SetOpenFunc(nil)
 
 	db, _ := sql.Open("testdb", "foo")
 	conn, err := db.Driver().Open("foo")

@@ -31,7 +31,7 @@ func (d *Driver) Open(dsn string) (driver.Conn, error) {
 	return d.conn, nil
 }
 
-func (d *Driver) SetOpen(f opener) {
+func (d *Driver) SetOpenFunc(f opener) {
 	d.open = f
 }
 
