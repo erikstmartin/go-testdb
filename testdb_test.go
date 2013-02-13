@@ -4,25 +4,9 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 )
-
-func ExampleSetOpenFunc() {
-	defer Reset()
-
-	SetOpenFunc(func(dsn string) (driver.Conn, error) {
-		// Conn() will return the same internal driver.Conn being used by the driver
-		return Conn(), errors.New("test error")
-	})
-
-	_, err := sql.Open("testdb", "foo")
-
-	if err != nil {
-		fmt.Println("Stubbed error returned as expected: " + err.Error())
-	}
-}
 
 func TestSetOpenFunc(t *testing.T) {
 	defer Reset()
@@ -30,8 +14,8 @@ func TestSetOpenFunc(t *testing.T) {
 	SetOpenFunc(func(dsn string) (driver.Conn, error) {
 		return Conn(), errors.New("test error")
 	})
-	defer SetOpenFunc(nil)
 
+	// err only returns from this if it's an unknown driver, we are stubbing opening a connection
 	db, _ := sql.Open("testdb", "foo")
 	conn, err := db.Driver().Open("foo")
 
@@ -177,13 +161,6 @@ func TestStubQueryError(t *testing.T) {
 	if res != nil {
 		t.Fatal("result should be nil on error")
 	}
-}
-
-type user struct {
-	id      int64
-	name    string
-	age     int64
-	created time.Time
 }
 
 func TestStubQueryMultipleResult(t *testing.T) {

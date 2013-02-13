@@ -36,7 +36,8 @@ func newDriver() *testDriver {
 
 func (d *testDriver) Open(dsn string) (driver.Conn, error) {
 	if d.open != nil {
-		return d.open(dsn)
+		conn, err := d.open(dsn)
+		return conn, err
 	}
 
 	if d.conn == nil {
