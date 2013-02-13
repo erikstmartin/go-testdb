@@ -372,3 +372,35 @@ func TestStubQueryRow(t *testing.T) {
 		t.Fatal("failed to return count")
 	}
 }
+
+func TestSetQueryFuncRow(t *testing.T) {
+	defer Reset()
+
+	columns := []string{"id", "name", "age", "created"}
+	rows := "1,tim,20,2012-10-01 01:00:01"
+
+	SetQueryFunc(func(query string) (result driver.Rows, err error) {
+		return RowsFromCSVString(columns, rows), nil
+	})
+
+	if Conn().(*conn).queryFunc == nil {
+		t.Fatal("query function not stubbed")
+	}
+
+	db, _ := sql.Open("testdb", "")
+
+	row := db.QueryRow("SELECT foo FROM bar")
+
+	var u = user{}
+	err := row.Scan(&u.id, &u.name, &u.age, &u.created)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ti := time.Date(2012, 10, 1, 1, 0, 1, 0, time.UTC)
+
+	if u.id == 0 || u.name == "" || u.age == 0 || u.created.Unix() != ti.Unix() {
+		t.Fatal("failed to populate object with result")
+	}
+}
