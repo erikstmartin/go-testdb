@@ -94,6 +94,5 @@ func TestMyDatabase(t *testing.T){
 Feel free to contribute and send pull requests
 - db.Prepare
 - db.Exec
-- db.QueryRow
 - Prepared Statements
 - Transactions

@@ -25,6 +25,8 @@ func ExampleSetOpenFunc() {
 }
 
 func TestSetOpenFunc(t *testing.T) {
+	defer Reset()
+
 	SetOpenFunc(func(dsn string) (driver.Conn, error) {
 		return Conn(), errors.New("test error")
 	})
@@ -47,6 +49,8 @@ func TestSetOpenFunc(t *testing.T) {
 }
 
 func TestStubQuery(t *testing.T) {
+	defer Reset()
+
 	db, _ := sql.Open("testdb", "")
 
 	sql := "select count(*) from foo"
@@ -77,6 +81,8 @@ func TestStubQuery(t *testing.T) {
 }
 
 func TestStubQueryAdditionalWhitespace(t *testing.T) {
+	defer Reset()
+
 	db, _ := sql.Open("testdb", "")
 
 	sqlWhitespace := "select count(*) from              foo"
@@ -108,6 +114,8 @@ func TestStubQueryAdditionalWhitespace(t *testing.T) {
 }
 
 func TestStubQueryChangeCase(t *testing.T) {
+	defer Reset()
+
 	db, _ := sql.Open("testdb", "")
 
 	sqlCase := "SELECT COUNT(*) FROM foo"
@@ -139,6 +147,8 @@ func TestStubQueryChangeCase(t *testing.T) {
 }
 
 func TestUnknownQuery(t *testing.T) {
+	defer Reset()
+
 	db, _ := sql.Open("testdb", "")
 
 	sql := "select count(*) from foobar"
@@ -150,6 +160,8 @@ func TestUnknownQuery(t *testing.T) {
 }
 
 func TestStubQueryError(t *testing.T) {
+	defer Reset()
+
 	db, _ := sql.Open("testdb", "")
 
 	sql := "select count(*) from error"
@@ -175,6 +187,8 @@ type user struct {
 }
 
 func TestStubQueryMultipleResult(t *testing.T) {
+	defer Reset()
+
 	db, _ := sql.Open("testdb", "")
 
 	sql := "select id, name, age from users"
@@ -216,6 +230,8 @@ func TestStubQueryMultipleResult(t *testing.T) {
 }
 
 func TestStubQueryMultipleResultNewline(t *testing.T) {
+	defer Reset()
+
 	db, _ := sql.Open("testdb", "")
 
 	sql := "select id, name, age from users"
@@ -254,6 +270,8 @@ func TestStubQueryMultipleResultNewline(t *testing.T) {
 }
 
 func TestSetQueryFunc(t *testing.T) {
+	defer Reset()
+
 	columns := []string{"id", "name", "age", "created"}
 	rows := "1,tim,20,2012-10-01 01:00:01\n2,joe,25,2012-10-02 02:00:02\n3,bob,30,2012-10-03 03:00:03"
 
@@ -261,9 +279,17 @@ func TestSetQueryFunc(t *testing.T) {
 		return RowsFromCSVString(columns, rows), nil
 	})
 
+	if Conn().(*conn).queryFunc == nil {
+		t.Fatal("query function not stubbed")
+	}
+
 	db, _ := sql.Open("testdb", "")
 
 	res, err := db.Query("SELECT foo FROM bar")
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	i := 0
 
@@ -289,6 +315,8 @@ func TestSetQueryFunc(t *testing.T) {
 }
 
 func TestSetQueryFuncError(t *testing.T) {
+	defer Reset()
+
 	SetQueryFunc(func(query string) (result driver.Rows, err error) {
 		return nil, errors.New("stubbed error")
 	})
@@ -312,5 +340,35 @@ func TestReset(t *testing.T) {
 
 	if len(d.conn.queries) > 0 {
 		t.Fatal("failed to reset connection")
+	}
+}
+
+func TestStubQueryRow(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	sql := "select count(*) from foo"
+	columns := []string{"count"}
+	result := `
+  5
+  `
+	StubQuery(sql, RowsFromCSVString(columns, result))
+
+	row := db.QueryRow(sql)
+
+	if row == nil {
+		t.Fatal("stub query should have returned row")
+	}
+
+	var count int64
+	err := row.Scan(&count)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if count != 5 {
+		t.Fatal("failed to return count")
 	}
 }

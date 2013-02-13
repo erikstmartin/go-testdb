@@ -36,8 +36,7 @@ func newDriver() *testDriver {
 
 func (d *testDriver) Open(dsn string) (driver.Conn, error) {
 	if d.open != nil {
-		conn, err := d.open(dsn)
-		return conn, err
+		return d.open(dsn)
 	}
 
 	if d.conn == nil {
@@ -85,7 +84,8 @@ func SetOpenFunc(f func(dsn string) (driver.Conn, error)) {
 
 // Clears all stubbed queries, and replaced functions.
 func Reset() {
-	d = newDriver()
+	d.conn = newConn()
+	d.open = nil
 }
 
 // Returns a pointer to the global conn object associated with this driver.
