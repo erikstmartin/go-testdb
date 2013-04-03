@@ -2,60 +2,53 @@ package testdb
 
 import (
 	"crypto/sha1"
+	"database/sql"
 	"database/sql/driver"
 	"encoding/csv"
-	"errors"
 	"io"
 	"regexp"
 	"strings"
 )
 
-type opener func(dsn string) (driver.Conn, error)
+var d *testDriver
 
-type Driver struct {
-	open opener
-	conn *Conn
+func init() {
+	d = newDriver()
+	sql.Register("testdb", d)
 }
 
-func (d *Driver) Open(dsn string) (driver.Conn, error) {
+type testDriver struct {
+	open func(dsn string) (driver.Conn, error)
+	conn *conn
+}
+
+type query struct {
+	result driver.Rows
+	err    error
+}
+
+func newDriver() *testDriver {
+	return &testDriver{
+		conn: newConn(),
+	}
+}
+
+func (d *testDriver) Open(dsn string) (driver.Conn, error) {
 	if d.open != nil {
 		conn, err := d.open(dsn)
 		return conn, err
 	}
 
 	if d.conn == nil {
-		d.conn = NewConn()
+		d.conn = newConn()
 	}
 
 	return d.conn, nil
 }
 
-func (d *Driver) SetOpen(f opener) {
-	d.open = f
-}
-
-func (d *Driver) SetConnection(conn *Conn) {
-	d.conn = conn
-}
-
-type Conn struct {
-	queries   map[string]Query
-	queryFunc func(query string) (result driver.Rows, err error)
-}
-
-func NewConn() *Conn {
-	return &Conn{
-		queries: make(map[string]Query),
-	}
-}
-
 var whitespaceRegexp = regexp.MustCompile("\\s")
 
-func (c *Conn) SetQueryFunc(f func(query string) (result driver.Rows, err error)) {
-	c.queryFunc = f
-}
-
-func (c *Conn) getQueryHash(query string) string {
+func getQueryHash(query string) string {
 	// Remove whitespace and lowercase to make stubbing less brittle
 	query = strings.ToLower(whitespaceRegexp.ReplaceAllString(query, ""))
 
@@ -65,123 +58,43 @@ func (c *Conn) getQueryHash(query string) string {
 	return string(h.Sum(nil))
 }
 
-func (c *Conn) StubQuery(query string, result driver.Rows) {
-	c.queries[c.getQueryHash(query)] = Query{
+// Set your own function to be executed when db.Query() is called. As with StubQuery() you can use the RowsFromCSVString() method to easily generate the driver.Rows, or you can return your own.
+func SetQueryFunc(f func(query string) (result driver.Rows, err error)) {
+	d.conn.queryFunc = f
+}
+
+// Stubs the global driver.Conn to return the supplied driver.Rows when db.Query() is called, query stubbing is case insensitive, and whitespace is also ignored.
+func StubQuery(q string, result driver.Rows) {
+	d.conn.queries[getQueryHash(q)] = query{
 		result: result,
 	}
 }
 
-func (c *Conn) StubQueryError(query string, err error) {
-	c.queries[c.getQueryHash(query)] = Query{
+// Stubs the global driver.Conn to return the supplied error when db.Query() is called, query stubbing is case insensitive. and whitespace is also ignored.
+func StubQueryError(q string, err error) {
+	d.conn.queries[getQueryHash(q)] = query{
 		err: err,
 	}
 }
 
-func (c *Conn) Prepare(query string) (driver.Stmt, error) {
-	if c.queryFunc != nil {
-		result, err := c.queryFunc(query)
-
-		return &Stmt{
-			result: result,
-			err:    err,
-		}, nil
-	}
-
-	if q, ok := c.queries[c.getQueryHash(query)]; ok {
-		return &Stmt{
-			result: q.result,
-			err:    q.err,
-		}, nil
-	}
-
-	return &Stmt{}, errors.New("Query not stubbed: " + query)
+// Set your own function to be executed when db.Open() is called. You can either hand back a valid connection, or an error. Conn() can be used to grab the global Conn object containing stubbed queries.
+func SetOpenFunc(f func(dsn string) (driver.Conn, error)) {
+	d.open = f
 }
 
-func (*Conn) Close() error {
-	return nil
+// Clears all stubbed queries, and replaced functions.
+func Reset() {
+	d.conn = newConn()
+	d.open = nil
 }
 
-func (*Conn) Begin() (driver.Tx, error) {
-	return &Tx{}, nil
-}
-
-func (c *Conn) Exec(query string, args []driver.Value) (driver.Result, error) {
-	return nil, nil
-}
-
-type Stmt struct {
-	result driver.Rows
-	err    error
-}
-
-func (*Stmt) Close() error {
-	return nil
-}
-
-func (*Stmt) NumInput() int {
-	return 0
-}
-
-func (*Stmt) Exec(args []driver.Value) (driver.Result, error) {
-	return nil, nil
-}
-
-func (s *Stmt) Query(args []driver.Value) (driver.Rows, error) {
-	return s.result, s.err
-}
-
-type Tx struct {
-}
-
-func (*Tx) Commit() error {
-	return nil
-}
-
-func (*Tx) Rollback() error {
-	return nil
-}
-
-type Rows struct {
-	closed  bool
-	columns []string
-	rows    [][]driver.Value
-	pos     int
-}
-
-func (rs *Rows) Next(dest []driver.Value) error {
-	rs.pos++
-	if rs.pos > len(rs.rows) {
-		rs.closed = true
-
-		return io.EOF // per interface spec
-	}
-
-	for i, col := range rs.rows[rs.pos-1] {
-		dest[i] = col
-	}
-
-	return nil
-}
-
-func (rs *Rows) Err() error {
-	return nil
-}
-
-func (rs *Rows) Columns() []string {
-	return rs.columns
-}
-
-func (rs *Rows) Close() error {
-	return nil
-}
-
-type Query struct {
-	result driver.Rows
-	err    error
+// Returns a pointer to the global conn object associated with this driver.
+func Conn() driver.Conn {
+	return d.conn
 }
 
 func RowsFromCSVString(columns []string, s string) driver.Rows {
-	rows := &Rows{
+	rs := &rows{
 		columns: columns,
 		closed:  false,
 	}
@@ -203,8 +116,8 @@ func RowsFromCSVString(columns []string, s string) driver.Rows {
 			row[i] = v
 		}
 
-		rows.rows = append(rows.rows, row)
+		rs.rows = append(rs.rows, row)
 	}
 
-	return rows
+	return rs
 }

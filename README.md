@@ -5,33 +5,23 @@ Framework for stubbing responses from go's driver.Driver interface.
 
 This can be used to sit in place of your sql.Db so that you can stub responses for sql calls, and remove database dependencies for your test suite.
 
-This project is in it's infancy, but has worked well for all the use cases i've had so far, and continues to evolve as new scenarios are uncovered. Please feel free to send pull-requests, or submit feature requests if you have scenarios that are not accounted for yet.
+This project is in its infancy, but has worked well for all the use cases i've had so far, and continues to evolve as new scenarios are uncovered. Please feel free to send pull-requests, or submit feature requests if you have scenarios that are not accounted for yet.
 
 ## Setup
-The first thing that needs to be done is to make go's sql package aware of the new driver. We make sure that Conn is accessible by the rest of program, so that we can use it to stub our queries.
-
-The reason this is not performed automatically by the package, is so that you can stub other conditions like failing to connect to the database.
+The only thing needed for setup is to include the go-testdb package, then you can create your db connection specifying "testdb" as your driver.
 <pre>
 import (
 	"database/sql"
-	"github.com/erikstmartin/go-testdb"
+	_"github.com/erikstmartin/go-testdb"
 )
 
-var c *Conn
-
-func init() {
-	c := testdb.NewConn()
-	d := &testdb.Driver{}
-	d.SetConnection(conn)
-	
-	sql.Register("testdb", d)
-}
+db, _ := sql.Open("testdb", "")
 </pre>
 
-## Stubbing connect failure
+## Stubbing connection failure
 You're able to set your own function to execute when the sql library calls sql.Open
 <pre>
-d.SetOpen(func(dsn string) (driver.Conn, error) {
+testdb.SetOpen(func(dsn string) (driver.Conn, error) {
 	return c, errors.New("failed to connect")
 })
 </pre>
@@ -53,7 +43,7 @@ result := `
 2,joe,25,2012-10-02 02:00:02
 3,bob,30,2012-10-03 03:00:03
 `
-conn.StubQuery(sql, RowsFromCSVString(columns, result))
+testdb.StubQuery(sql, RowsFromCSVString(columns, result))
 
 res, err := db.Query(sql)
 </pre>
@@ -63,7 +53,7 @@ Some times you need more control over Query being run, maybe you need to assert 
 
 You can return either a driver.Rows for response (your own or utilize RowsFromCSV) or an error to be returned
 <pre>
-conn.SetQueryFunc(func(query string) (result driver.Rows, err error) {
+testdb.SetQueryFunc(func(query string) (result driver.Rows, err error) {
 	columns := []string{"id", "name", "age", "created"}
 	result := `
 1,tim,20,2012-10-01 01:00:01
@@ -86,7 +76,23 @@ In case you need to stub errors returned from queries to ensure your code handle
 db, _ := sql.Open("testdb", "")
 
 sql := "select count(*) from error"
-conn.StubQueryError(sql, errors.New("test error"))
+testdb.StubQueryError(sql, errors.New("test error"))
 
 res, err := db.Query(sql)
 </pre>
+
+## Reset
+At any point in your test, or as a defer you can remove all stubbed queries, errors, custom set Query or Open functions by calling the reset method.
+
+<pre>
+func TestMyDatabase(t *testing.T){
+	defer testdb.Reset()
+}
+</pre>
+
+#### TODO
+Feel free to contribute and send pull requests
+- db.Prepare
+- db.Exec
+- Prepared Statements
+- Transactions
