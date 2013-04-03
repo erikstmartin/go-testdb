@@ -162,6 +162,24 @@ func TestStubQueryError(t *testing.T) {
 	}
 }
 
+func TestStubQueryRowError(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	sql := "select count(*) from error"
+
+	StubQueryError(sql, errors.New("test error"))
+
+	row := db.QueryRow(sql)
+	var count int64
+	err := row.Scan(&count)
+
+	if err == nil {
+		t.Fatal("error not returned")
+	}
+}
+
 func TestStubQueryMultipleResult(t *testing.T) {
 	defer Reset()
 
@@ -370,5 +388,28 @@ func TestSetQueryFuncRow(t *testing.T) {
 
 	if u.id == 0 || u.name == "" || u.age == 0 || u.created == "" {
 		t.Fatal("failed to populate object with result")
+	}
+}
+
+func TestSetQueryFuncRowError(t *testing.T) {
+	defer Reset()
+
+	SetQueryFunc(func(query string) (result driver.Rows, err error) {
+		return nil, errors.New("Stubbed error")
+	})
+
+	if Conn().(*conn).queryFunc == nil {
+		t.Fatal("query function not stubbed")
+	}
+
+	db, _ := sql.Open("testdb", "")
+
+	row := db.QueryRow("SELECT foo FROM bar")
+
+	var u = user{}
+	err := row.Scan(&u.id, &u.name, &u.age, &u.created)
+
+	if err == nil {
+		t.Fatal("Did not return error")
 	}
 }
