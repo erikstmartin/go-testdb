@@ -5,7 +5,6 @@ import (
 	"database/sql/driver"
 	"errors"
 	"testing"
-	"time"
 )
 
 var d *Driver
@@ -181,7 +180,7 @@ type user struct {
 	id      int64
 	name    string
 	age     int64
-	created time.Time
+	created string
 }
 
 func TestStubQueryMultipleResult(t *testing.T) {
@@ -215,9 +214,7 @@ func TestStubQueryMultipleResult(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		ti := time.Date(2012, 10, i+1, i+1, 0, i+1, 0, time.UTC)
-
-		if u.id == 0 || u.name == "" || u.age == 0 || u.created.Unix() != ti.Unix() {
+		if u.id == 0 || u.name == "" || u.age == 0 || u.created == "" {
 			t.Fatal("failed to populate object with result")
 		}
 		i++
@@ -256,9 +253,7 @@ func TestStubQueryMultipleResultNewline(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		ti := time.Date(2012, 10, i+1, i+1, 0, i+1, 0, time.UTC)
-
-		if u.id == 0 || u.name == "" || u.age == 0 || u.created.Unix() != ti.Unix() {
+		if u.id == 0 || u.name == "" || u.age == 0 || u.created == "" {
 			t.Fatal("failed to populate object with result")
 		}
 		i++
@@ -293,9 +288,7 @@ func TestSetQueryFunc(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		ti := time.Date(2012, 10, i+1, i+1, 0, i+1, 0, time.UTC)
-
-		if u.id == 0 || u.name == "" || u.age == 0 || u.created.Unix() != ti.Unix() {
+		if u.id == 0 || u.name == "" || u.age == 0 || u.created == "" {
 			t.Fatal("failed to populate object with result")
 		}
 		i++

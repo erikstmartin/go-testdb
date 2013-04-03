@@ -8,7 +8,6 @@ import (
 	"io"
 	"regexp"
 	"strings"
-	"time"
 )
 
 type opener func(dsn string) (driver.Conn, error)
@@ -181,8 +180,6 @@ type Query struct {
 	err    error
 }
 
-var timeRegex, _ = regexp.Compile(`^\d{4}-\d{2}-\d{2}(\s\d{2}:\d{2}:\d{2})?$`)
-
 func RowsFromCSVString(columns []string, s string) driver.Rows {
 	rows := &Rows{
 		columns: columns,
@@ -203,13 +200,7 @@ func RowsFromCSVString(columns []string, s string) driver.Rows {
 
 		for i, v := range r {
 			v := strings.TrimSpace(v)
-
-			if timeRegex.MatchString(v) {
-				t, _ := time.Parse("2006-01-02 15:04:05", v)
-				row[i] = t
-			} else {
-				row[i] = v
-			}
+			row[i] = v
 		}
 
 		rows.rows = append(rows.rows, row)
