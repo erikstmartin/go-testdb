@@ -18,12 +18,13 @@ func init() {
 }
 
 type testDriver struct {
-	open func(dsn string) (driver.Conn, error)
-	conn *conn
+	openFunc func(dsn string) (driver.Conn, error)
+	conn     *conn
 }
 
 type query struct {
-	result driver.Rows
+	rows   driver.Rows
+	result *Result
 	err    error
 }
 
@@ -34,8 +35,8 @@ func newDriver() *testDriver {
 }
 
 func (d *testDriver) Open(dsn string) (driver.Conn, error) {
-	if d.open != nil {
-		conn, err := d.open(dsn)
+	if d.openFunc != nil {
+		conn, err := d.openFunc(dsn)
 		return conn, err
 	}
 
@@ -64,13 +65,13 @@ func SetQueryFunc(f func(query string) (result driver.Rows, err error)) {
 }
 
 // Stubs the global driver.Conn to return the supplied driver.Rows when db.Query() is called, query stubbing is case insensitive, and whitespace is also ignored.
-func StubQuery(q string, result driver.Rows) {
+func StubQuery(q string, rows driver.Rows) {
 	d.conn.queries[getQueryHash(q)] = query{
-		result: result,
+		rows: rows,
 	}
 }
 
-// Stubs the global driver.Conn to return the supplied error when db.Query() is called, query stubbing is case insensitive. and whitespace is also ignored.
+// Stubs the global driver.Conn to return the supplied error when db.Query() is called, query stubbing is case insensitive, and whitespace is also ignored.
 func StubQueryError(q string, err error) {
 	d.conn.queries[getQueryHash(q)] = query{
 		err: err,
@@ -79,13 +80,30 @@ func StubQueryError(q string, err error) {
 
 // Set your own function to be executed when db.Open() is called. You can either hand back a valid connection, or an error. Conn() can be used to grab the global Conn object containing stubbed queries.
 func SetOpenFunc(f func(dsn string) (driver.Conn, error)) {
-	d.open = f
+	d.openFunc = f
+}
+
+// Set your own function to be executed when db.Exec is called. You can return an error or a Result object with the LastInsertId and RowsAffected
+func SetExecFunc(f func(query string, args ...interface{}) (sql.Result, error)) {
+	d.conn.execFunc = f
+}
+
+// Stubs the global driver.Conn to return the supplied Result when db.Exec is called, query stubbing is case insensitive, and whitespace is also ignored.
+func StubExec(q string, r *Result) {
+	d.conn.queries[getQueryHash(q)] = query{
+		result: r,
+	}
+}
+
+// Stubs the global driver.Conn to return the supplied error when db.Exec() is called, query stubbing is case insensitive, and whitespace is also ignored.
+func StubExecError(q string, err error) {
+	StubQueryError(q, err)
 }
 
 // Clears all stubbed queries, and replaced functions.
 func Reset() {
 	d.conn = newConn()
-	d.open = nil
+	d.openFunc = nil
 }
 
 // Returns a pointer to the global conn object associated with this driver.

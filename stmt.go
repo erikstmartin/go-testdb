@@ -5,22 +5,24 @@ import (
 )
 
 type stmt struct {
-	result driver.Rows
+	rows   driver.Rows
+	result driver.Result
 	err    error
 }
 
-func (*stmt) Close() error {
+func (s *stmt) Close() error {
 	return nil
 }
 
-func (*stmt) NumInput() int {
-	return 0
+func (s *stmt) NumInput() int {
+	// This prevents the sql package from validating the number of inputs
+	return -1
 }
 
-func (*stmt) Exec(args []driver.Value) (driver.Result, error) {
-	return nil, nil
+func (s *stmt) Exec(args []driver.Value) (driver.Result, error) {
+	return s.result, s.err
 }
 
 func (s *stmt) Query(args []driver.Value) (driver.Rows, error) {
-	return s.result, s.err
+	return s.rows, s.err
 }

@@ -1,6 +1,7 @@
 package testdb
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"errors"
 )
@@ -8,6 +9,7 @@ import (
 type conn struct {
 	queries   map[string]query
 	queryFunc func(query string) (result driver.Rows, err error)
+	execFunc  func(query string, args ...interface{}) (sql.Result, error)
 }
 
 func newConn() *conn {
@@ -18,18 +20,19 @@ func newConn() *conn {
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {
 	if c.queryFunc != nil {
-		result, err := c.queryFunc(query)
+		rows, err := c.queryFunc(query)
 
 		return &stmt{
-			result: result,
-			err:    err,
+			rows: rows,
+			err:  err,
 		}, nil
 	}
 
 	if q, ok := d.conn.queries[getQueryHash(query)]; ok {
 		return &stmt{
-			result: q.result,
+			rows:   q.rows,
 			err:    q.err,
+			result: q.result,
 		}, nil
 	}
 
@@ -45,5 +48,17 @@ func (*conn) Begin() (driver.Tx, error) {
 }
 
 func (c *conn) Exec(query string, args []driver.Value) (driver.Result, error) {
-	return nil, nil
+	if c.execFunc != nil {
+		return c.execFunc(query, args)
+	}
+
+	if q, ok := d.conn.queries[getQueryHash(query)]; ok {
+		if q.result != nil {
+			return q.result, nil
+		} else if q.err != nil {
+			return nil, q.err
+		}
+	}
+
+	return nil, errors.New("Exec call not stubbed: " + query)
 }

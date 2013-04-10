@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -411,5 +412,106 @@ func TestSetQueryFuncRowError(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("Did not return error")
+	}
+}
+
+func TestStubExec(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	sql := "INSERT INTO foo SET (foo) VALUES (bar)"
+	StubExec(sql, NewResult(5, errors.New("last insert error"), 3, errors.New("rows affected error")))
+
+	res, err := db.Exec(sql)
+
+	if err != nil {
+		t.Fatal("stubbed exec call returned unexpected error")
+	}
+
+	var insertId int64
+	insertId, err = res.LastInsertId()
+	if insertId != 5 || err.Error() != "last insert error" {
+		t.Fatal("stubbed exec did not return expected result")
+	}
+
+	var affected int64
+	affected, err = res.RowsAffected()
+
+	if affected != 3 || err.Error() != "rows affected error" {
+		t.Fatal("stubbed exec did not return expected result")
+	}
+}
+
+func TestStubExecError(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	query := "INSERT INTO foo SET (foo) VALUES (bar)"
+	StubExecError(query, errors.New("request failed"))
+
+	res, err := db.Exec(query)
+
+	if reflect.Indirect(reflect.ValueOf(res)).CanAddr() {
+		t.Fatal("stubbed exec returned unexpected result")
+	}
+
+	if err == nil || err.Error() != "request failed" {
+		t.Fatal("stubbed exec call did not return expected error")
+	}
+}
+
+func TestStubExecFunc(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	query := "INSERT INTO foo SET (foo) VALUES (bar)"
+	result := NewResult(5, errors.New("last insert error"), 3, errors.New("rows affected error"))
+
+	SetExecFunc(func(query string, args ...interface{}) (sql.Result, error) {
+		return result, nil
+	})
+
+	res, err := db.Exec(query)
+
+	if err != nil {
+		t.Fatal("stubbed exec returned unexpected error")
+	}
+
+	var insertId int64
+	insertId, err = res.LastInsertId()
+	if insertId != 5 || err.Error() != "last insert error" {
+		t.Fatal("stubbed exec did not return expected result")
+	}
+
+	var affected int64
+	affected, err = res.RowsAffected()
+
+	if affected != 3 || err.Error() != "rows affected error" {
+		t.Fatal("stubbed exec did not return expected result")
+	}
+}
+
+func TestStubExecFuncError(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	query := "INSERT INTO foo SET (foo) VALUES (bar)"
+
+	SetExecFunc(func(query string, args ...interface{}) (sql.Result, error) {
+		return nil, errors.New("request failed")
+	})
+
+	res, err := db.Exec(query)
+
+	if res != nil {
+		t.Fatal("stubbed exec unexpected result")
+	}
+
+	if err == nil || err.Error() != "request failed" {
+		t.Fatal("stubbed exec did not return expected error")
 	}
 }
