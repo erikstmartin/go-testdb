@@ -92,7 +92,5 @@ func TestMyDatabase(t *testing.T){
 
 #### TODO
 Feel free to contribute and send pull requests
-- db.Prepare
-- db.Exec
 - Prepared Statements
 - Transactions
