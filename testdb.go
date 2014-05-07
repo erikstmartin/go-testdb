@@ -8,6 +8,7 @@ import (
 	"io"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var d *testDriver
@@ -131,7 +132,12 @@ func RowsFromCSVString(columns []string, s string) driver.Rows {
 
 		for i, v := range r {
 			v := strings.TrimSpace(v)
-			row[i] = v
+			// Is this actually a DateTime in RFC3339 format?
+			if time, err := time.Parse(time.RFC3339, v); err == nil {
+				row[i] = time
+			} else {
+				row[i] = v
+			}
 		}
 
 		rs.rows = append(rs.rows, row)
