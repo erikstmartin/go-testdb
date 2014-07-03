@@ -470,7 +470,7 @@ func TestStubExecFunc(t *testing.T) {
 	query := "INSERT INTO foo SET (foo) VALUES (bar)"
 	result := NewResult(5, errors.New("last insert error"), 3, errors.New("rows affected error"))
 
-	SetExecFunc(func(query string, args ...interface{}) (sql.Result, error) {
+	SetExecFunc(func(query string) (driver.Result, error) {
 		return result, nil
 	})
 
@@ -501,7 +501,7 @@ func TestStubExecFuncError(t *testing.T) {
 
 	query := "INSERT INTO foo SET (foo) VALUES (bar)"
 
-	SetExecFunc(func(query string, args ...interface{}) (sql.Result, error) {
+	SetExecFunc(func(query string) (driver.Result, error) {
 		return nil, errors.New("request failed")
 	})
 
