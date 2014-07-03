@@ -67,13 +67,13 @@ func getQueryHash(query string) string {
 
 // Set your own function to be executed when db.Query() is called. As with StubQuery() you can use the RowsFromCSVString() method to easily generate the driver.Rows, or you can return your own.
 func SetQueryFunc(f func(query string) (result driver.Rows, err error)) {
-	SetQueryWithArgsFunc(func(query string, args ...interface{}) (result driver.Rows, err error) {
+	SetQueryWithArgsFunc(func(query string, args []driver.Value) (result driver.Rows, err error) {
 		return f(query)
 	})
 }
 
 // Set your own function to be executed when db.Query() is called. As with StubQuery() you can use the RowsFromCSVString() method to easily generate the driver.Rows, or you can return your own.
-func SetQueryWithArgsFunc(f func(query string, args ...interface{}) (result driver.Rows, err error)) {
+func SetQueryWithArgsFunc(f func(query string, args []driver.Value) (result driver.Rows, err error)) {
 	d.conn.queryFunc = f
 }
 
@@ -98,13 +98,13 @@ func SetOpenFunc(f func(dsn string) (driver.Conn, error)) {
 
 // Set your own function to be executed when db.Exec is called. You can return an error or a Result object with the LastInsertId and RowsAffected
 func SetExecFunc(f func(query string) (driver.Result, error)) {
-	SetExecWithArgsFunc(func(query string, args ...interface{}) (driver.Result, error) {
+	SetExecWithArgsFunc(func(query string, args []driver.Value) (driver.Result, error) {
 		return f(query)
 	})
 }
 
 // Set your own function to be executed when db.Exec is called. You can return an error or a Result object with the LastInsertId and RowsAffected
-func SetExecWithArgsFunc(f func(query string, args ...interface{}) (driver.Result, error)) {
+func SetExecWithArgsFunc(f func(query string, args []driver.Value) (driver.Result, error)) {
 	d.conn.execFunc = f
 }
 
