@@ -69,7 +69,7 @@ db, _ := sql.Open("testdb", "")
 res, err := db.Query("SELECT foo FROM bar")
 </pre>
 
-## Stubbing Query with arguments function
+## Stubbing Parameterized Query
 Sometimes you need control over the results of a parameterized query.
 
 <pre>
@@ -98,6 +98,34 @@ sql := "select count(*) from error"
 testdb.StubQueryError(sql, errors.New("test error"))
 
 res, err := db.Query(sql)
+</pre>
+
+## Stubbing Parameterized Exec query
+Sometimes you need control over the handling of a parameterized query that does not return any rows.
+
+<pre>
+type testResult struct{
+	lastId int64
+	affectedRows int64
+}
+
+func (r testResult) LastInsertId() (int64, error){
+	return r.lastId, nil
+}
+
+func (r testResult) RowsAffected() (int64, error) {
+	return r.affectedRows, nil
+}
+testdb.SetExecWithArgsFunc(func(query string, args []driver.Value) (result driver.Result, err error) {
+	if args[0] == "joe" {
+		return testResult{1, 1}, nil
+	}
+	return testResult{1, 0}, nil
+})
+
+db, _ := sql.Open("testdb", "")
+
+res, _ := db.Exec("UPDATE bar SET name = 'foo' WHERE name = ?", "joe")
 </pre>
 
 ## Reset
