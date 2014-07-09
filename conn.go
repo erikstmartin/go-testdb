@@ -1,15 +1,14 @@
 package testdb
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"errors"
 )
 
 type conn struct {
 	queries   map[string]query
-	queryFunc func(query string) (result driver.Rows, err error)
-	execFunc  func(query string, args ...interface{}) (sql.Result, error)
+	queryFunc func(query string, args []driver.Value) (driver.Rows, error)
+	execFunc  func(query string, args []driver.Value) (driver.Result, error)
 }
 
 func newConn() *conn {
@@ -19,24 +18,45 @@ func newConn() *conn {
 }
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {
-	if c.queryFunc != nil {
-		rows, err := c.queryFunc(query)
+	s := new(stmt)
 
-		return &stmt{
-			rows: rows,
-			err:  err,
-		}, nil
+	if c.queryFunc != nil {
+		s.queryFunc = func(args []driver.Value) (driver.Rows, error) {
+			return c.queryFunc(query, args)
+		}
+	}
+
+	if c.execFunc != nil {
+		s.execFunc = func(args []driver.Value) (driver.Result, error) {
+			return c.execFunc(query, args)
+		}
 	}
 
 	if q, ok := d.conn.queries[getQueryHash(query)]; ok {
-		return &stmt{
-			rows:   q.rows,
-			err:    q.err,
-			result: q.result,
-		}, nil
+		if s.queryFunc == nil && q.rows != nil {
+			s.queryFunc = func(args []driver.Value) (driver.Rows, error) {
+				if q.rows != nil {
+					return q.rows, nil
+				}
+				return nil, q.err
+			}
+		}
+
+		if s.execFunc == nil && q.result != nil {
+			s.execFunc = func(args []driver.Value) (driver.Result, error) {
+				if q.result != nil {
+					return q.result, nil
+				}
+				return nil, q.err
+			}
+		}
 	}
 
-	return new(stmt), errors.New("Query not stubbed: " + query)
+	if !(s.queryFunc == nil || s.execFunc == nil) {
+		return new(stmt), errors.New("Query not stubbed: " + query)
+	}
+
+	return s, nil
 }
 
 func (*conn) Close() error {
@@ -45,6 +65,16 @@ func (*conn) Close() error {
 
 func (*conn) Begin() (driver.Tx, error) {
 	return &tx{}, nil
+}
+
+func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
+	if c.queryFunc != nil {
+		return c.queryFunc(query, args)
+	}
+	if q, ok := d.conn.queries[getQueryHash(query)]; ok {
+		return q.rows, q.err
+	}
+	return nil, errors.New("Query not stubbed: " + query)
 }
 
 func (c *conn) Exec(query string, args []driver.Value) (driver.Result, error) {

@@ -5,9 +5,8 @@ import (
 )
 
 type stmt struct {
-	rows   driver.Rows
-	result driver.Result
-	err    error
+	queryFunc func(args []driver.Value) (driver.Rows, error)
+	execFunc  func(args []driver.Value) (driver.Result, error)
 }
 
 func (s *stmt) Close() error {
@@ -20,9 +19,9 @@ func (s *stmt) NumInput() int {
 }
 
 func (s *stmt) Exec(args []driver.Value) (driver.Result, error) {
-	return s.result, s.err
+	return s.execFunc(args)
 }
 
 func (s *stmt) Query(args []driver.Value) (driver.Rows, error) {
-	return s.rows, s.err
+	return s.queryFunc(args)
 }
