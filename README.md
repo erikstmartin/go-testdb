@@ -69,6 +69,25 @@ db, _ := sql.Open("testdb", "")
 res, err := db.Query("SELECT foo FROM bar")
 </pre>
 
+## Stubbing Query with arguments function
+Sometimes you need control over the results of a parameterized query.
+
+<pre>
+testdb.SetQueryWithArgsFunc(func(query string, args []driver.Value) (result driver.Rows, err error) {
+	columns := []string{"id", "name", "age", "created"}
+
+	rows := ""
+	if args[0] == "joe" {
+		rows = "2,joe,25,2012-10-02 02:00:02"
+	}
+	return testdb.RowsFromCSVString(columns, rows), nil
+})
+
+db, _ := sql.Open("testdb", "")
+
+res, _ := db.Query("SELECT foo FROM bar WHERE name = $1", "joe")
+</pre>
+
 ## Stubbing errors returned from queries
 In case you need to stub errors returned from queries to ensure your code handles them properly
 

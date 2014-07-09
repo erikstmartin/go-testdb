@@ -170,3 +170,31 @@ func ExampleSetQueryFunc_queryRow() {
 	// Output:
 	// tim - 20
 }
+
+func ExampleSetQueryWithArgsFunc() {
+	defer Reset()
+
+	SetQueryWithArgsFunc(func(query string, args []driver.Value) (result driver.Rows, err error) {
+		columns := []string{"id", "name", "age", "created"}
+
+		rows := ""
+		if args[0] == "joe" {
+			rows = "2,joe,25,2012-10-02 02:00:02"
+		}
+		return RowsFromCSVString(columns, rows), nil
+	})
+
+	db, _ := sql.Open("testdb", "")
+
+	res, _ := db.Query("SELECT foo FROM bar WHERE name = $1", "joe")
+
+	for res.Next() {
+		var u = new(user)
+		res.Scan(&u.id, &u.name, &u.age, &u.created)
+
+		fmt.Println(u.name + " - " + strconv.FormatInt(u.age, 10))
+	}
+
+	// Output:
+	// joe - 25
+}
