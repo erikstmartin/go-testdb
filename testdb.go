@@ -122,7 +122,9 @@ func StubExecError(q string, err error) {
 
 // Clears all stubbed queries, and replaced functions.
 func Reset() {
-	d.conn = newConn()
+	d.conn.queries = make(map[string]query)
+	d.conn.queryFunc = nil
+	d.conn.execFunc = nil
 	d.openFunc = nil
 }
 
