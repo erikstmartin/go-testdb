@@ -39,6 +39,7 @@ func (c *conn) Prepare(query string) (driver.Stmt, error) {
 					if rows, ok := q.rows.(*rows); ok {
 						return rows.clone(), nil
 					}
+					return q.rows, nil
 				}
 				return nil, q.err
 			}
