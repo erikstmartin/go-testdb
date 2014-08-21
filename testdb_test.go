@@ -6,6 +6,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestSetOpenFunc(t *testing.T) {
@@ -513,5 +514,94 @@ func TestStubExecFuncError(t *testing.T) {
 
 	if err == nil || err.Error() != "request failed" {
 		t.Fatal("stubbed exec did not return expected error")
+	}
+}
+
+func TestDisabledTimeParsing(t *testing.T) {
+	defer Reset()
+
+	columns := []string{"created"}
+	rows := "2012-10-01T01:00:01-03:00"
+
+	SetQueryFunc(func(query string) (result driver.Rows, err error) {
+		return RowsFromCSVString(columns, rows), nil
+	})
+
+	if Conn().(*conn).queryFunc == nil {
+		t.Fatal("query function not stubbed")
+	}
+
+	EnableTimeParsing(false)
+	db, _ := sql.Open("testdb", "")
+
+	row := db.QueryRow("SELECT foo FROM bar")
+
+	var u = struct{ created time.Time }{}
+	err := row.Scan(&u.created)
+
+	if err == nil {
+		t.Fatal("Not detecting time type in scan")
+	}
+}
+
+func TestEnableTimeParsing(t *testing.T) {
+	defer Reset()
+
+	columns := []string{"created"}
+	rows := "2012-10-01T01:00:01-03:00"
+
+	SetQueryFunc(func(query string) (result driver.Rows, err error) {
+		return RowsFromCSVString(columns, rows), nil
+	})
+
+	if Conn().(*conn).queryFunc == nil {
+		t.Fatal("query function not stubbed")
+	}
+
+	EnableTimeParsing(true)
+	db, _ := sql.Open("testdb", "")
+
+	row := db.QueryRow("SELECT foo FROM bar")
+
+	var u = struct{ created time.Time }{}
+	err := row.Scan(&u.created)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if u.created.Format(time.RFC3339) != "2012-10-01T01:00:01-03:00" {
+		t.Fatal("failed to populate time object with result")
+	}
+}
+
+func TestEnableTimeParsingWithFormat(t *testing.T) {
+	defer Reset()
+
+	columns := []string{"created"}
+	rows := "2012-10-01 01:00:01"
+
+	SetQueryFunc(func(query string) (result driver.Rows, err error) {
+		return RowsFromCSVString(columns, rows), nil
+	})
+
+	if Conn().(*conn).queryFunc == nil {
+		t.Fatal("query function not stubbed")
+	}
+
+	EnableTimeParsingWithFormat("2006-01-02 15:04:05")
+	db, _ := sql.Open("testdb", "")
+
+	row := db.QueryRow("SELECT foo FROM bar")
+
+	var u = struct{ created time.Time }{}
+	err := row.Scan(&u.created)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if u.created.Format("2006-01-02 15:04:05") != "2012-10-01 01:00:01" {
+		t.Fatal("failed to populate time object with result")
 	}
 }
