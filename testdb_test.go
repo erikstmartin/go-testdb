@@ -363,6 +363,38 @@ func TestStubQueryRow(t *testing.T) {
 	}
 }
 
+func TestStubQueryRowReuse(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	sql := "select count(*) from foo"
+	columns := []string{"count"}
+	result := `
+  5
+  `
+	StubQuery(sql, RowsFromCSVString(columns, result))
+
+	i := 0
+	rows, _ := db.Query(sql)
+	for rows.Next() {
+		i++
+	}
+	if i != 1 {
+		t.Fatal("stub query should have returned one row")
+	}
+
+	j := i
+	moreRows, _ := db.Query(sql)
+	for moreRows.Next() {
+		j++
+	}
+
+	if i == j {
+		t.Fatal("stub query did not return another set of rows")
+	}
+}
+
 func TestSetQueryFuncRow(t *testing.T) {
 	defer Reset()
 

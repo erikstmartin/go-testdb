@@ -12,6 +12,14 @@ type rows struct {
 	pos     int
 }
 
+func (rs *rows) clone() *rows {
+	if rs == nil {
+		return nil
+	}
+
+	return &rows{closed: false, columns: rs.columns, rows: rs.rows, pos: 0}
+}
+
 func (rs *rows) Next(dest []driver.Value) error {
 	rs.pos++
 	if rs.pos > len(rs.rows) {

@@ -139,14 +139,10 @@ func Conn() driver.Conn {
 }
 
 func RowsFromCSVString(columns []string, s string) driver.Rows {
-	rs := &rows{
-		columns: columns,
-		closed:  false,
-	}
-
 	r := strings.NewReader(strings.TrimSpace(s))
 	csvReader := csv.NewReader(r)
 
+	rows := [][]driver.Value{}
 	for {
 		r, err := csvReader.Read()
 
@@ -172,8 +168,17 @@ func RowsFromCSVString(columns []string, s string) driver.Rows {
 			}
 		}
 
-		rs.rows = append(rs.rows, row)
+		rows = append(rows, row)
 	}
 
-	return rs
+	return RowsFromSlice(columns, rows)
+}
+
+func RowsFromSlice(columns []string, data [][]driver.Value) driver.Rows {
+	return &rows{
+		closed:  false,
+		columns: columns,
+		rows:    data,
+		pos:     0,
+	}
 }

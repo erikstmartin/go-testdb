@@ -36,6 +36,9 @@ func (c *conn) Prepare(query string) (driver.Stmt, error) {
 		if s.queryFunc == nil && q.rows != nil {
 			s.queryFunc = func(args []driver.Value) (driver.Rows, error) {
 				if q.rows != nil {
+					if rows, ok := q.rows.(*rows); ok {
+						return rows.clone(), nil
+					}
 					return q.rows, nil
 				}
 				return nil, q.err
@@ -72,6 +75,9 @@ func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
 		return c.queryFunc(query, args)
 	}
 	if q, ok := d.conn.queries[getQueryHash(query)]; ok {
+		if rows, ok := q.rows.(*rows); ok {
+			return rows.clone(), q.err
+		}
 		return q.rows, q.err
 	}
 	return nil, errors.New("Query not stubbed: " + query)
