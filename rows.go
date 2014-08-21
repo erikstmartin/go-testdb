@@ -24,7 +24,6 @@ func (rs *rows) Next(dest []driver.Value) error {
 	rs.pos++
 	if rs.pos > len(rs.rows) {
 		rs.closed = true
-		rs.pos = 0
 
 		return io.EOF // per interface spec
 	}
