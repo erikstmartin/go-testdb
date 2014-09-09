@@ -547,3 +547,140 @@ func TestStubExecFuncError(t *testing.T) {
 		t.Fatal("stubbed exec did not return expected error")
 	}
 }
+
+func TestSetBeginFunc(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	SetBeginFunc(func() (driver.Tx, error) {
+		return nil, errors.New("begin failed")
+	})
+
+	res, err := db.Begin()
+
+	if res != nil {
+		t.Fatal("stubbed begin unexpected result")
+	}
+
+	if err == nil || err.Error() != "begin failed" {
+		t.Fatal("stubbed begin did not return expected error")
+	}
+}
+
+func TestStubBegin(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	StubBegin(nil, errors.New("begin failed"))
+	res, err := db.Begin()
+
+	if res != nil {
+		t.Fatal("stubbed begin unexpected result")
+	}
+
+	if err == nil || err.Error() != "begin failed" {
+		t.Fatal("stubbed begin did not return expected error")
+	}
+}
+
+func TestSetCommitFunc(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	SetCommitFunc(func() error {
+		return errors.New("commit failed")
+	})
+
+	tx, err := db.Begin()
+
+	if tx == nil {
+		t.Fatal("begin expected result")
+	}
+
+	if err != nil {
+		t.Fatal("begin returned unexpected error")
+	}
+
+	err = tx.Commit()
+
+	if err == nil || err.Error() != "commit failed" {
+		t.Fatal("stubbed commit did not return expected error")
+	}
+}
+
+func TestStubCommitError(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	StubCommitError(errors.New("commit failed"))
+
+	tx, err := db.Begin()
+
+	if tx == nil {
+		t.Fatal("begin expected result")
+	}
+
+	if err != nil {
+		t.Fatal("begin returned unexpected error")
+	}
+
+	err = tx.Commit()
+
+	if err == nil || err.Error() != "commit failed" {
+		t.Fatal("stubbed commit did not return expected error")
+	}
+}
+
+func TestSetRollbackFunc(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	SetRollbackFunc(func() error {
+		return errors.New("rollback failed")
+	})
+
+	tx, err := db.Begin()
+
+	if tx == nil {
+		t.Fatal("begin expected result")
+	}
+
+	if err != nil {
+		t.Fatal("begin returned unexpected error")
+	}
+
+	err = tx.Rollback()
+
+	if err == nil || err.Error() != "rollback failed" {
+		t.Fatal("stubbed rollback did not return expected error")
+	}
+}
+
+func TestStubRollbackError(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	StubRollbackError(errors.New("rollback failed"))
+
+	tx, err := db.Begin()
+
+	if tx == nil {
+		t.Fatal("begin expected result")
+	}
+
+	if err != nil {
+		t.Fatal("begin returned unexpected error")
+	}
+
+	err = tx.Rollback()
+
+	if err == nil || err.Error() != "rollback failed" {
+		t.Fatal("stubbed rollback did not return expected error")
+	}
+}
