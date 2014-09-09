@@ -6,9 +6,12 @@ import (
 )
 
 type conn struct {
-	queries   map[string]query
-	queryFunc func(query string, args []driver.Value) (driver.Rows, error)
-	execFunc  func(query string, args []driver.Value) (driver.Result, error)
+	queries      map[string]query
+	queryFunc    func(query string, args []driver.Value) (driver.Rows, error)
+	execFunc     func(query string, args []driver.Value) (driver.Result, error)
+	beginFunc    func() (driver.Tx, error)
+	commitFunc   func() error
+	rollbackFunc func() error
 }
 
 func newConn() *conn {
@@ -66,8 +69,20 @@ func (*conn) Close() error {
 	return nil
 }
 
-func (*conn) Begin() (driver.Tx, error) {
-	return &tx{}, nil
+func (c *conn) Begin() (driver.Tx, error) {
+	if c.beginFunc != nil {
+		return c.beginFunc()
+	}
+
+	t := &Tx{}
+	if c.commitFunc != nil {
+		t.SetCommitFunc(c.commitFunc)
+	}
+	if c.rollbackFunc != nil {
+		t.SetRollbackFunc(c.rollbackFunc)
+	}
+
+	return t, nil
 }
 
 func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
