@@ -233,3 +233,65 @@ func ExampleSetExecWithArgsFunc() {
 	// Output:
 	// RowsAffected = 1
 }
+
+func ExampleSetBeginFunc() {
+	defer Reset()
+
+	commitCalled := false
+	rollbackCalled := false
+	SetBeginFunc(func() (txn driver.Tx, err error) {
+		t := &Tx{}
+		t.SetCommitFunc(func() error {
+			commitCalled = true
+			return nil
+		})
+		t.SetRollbackFunc(func() error {
+			rollbackCalled = true
+			return nil
+		})
+		return t, nil
+	})
+
+	db, _ := sql.Open("testdb", "")
+	tx, _ := db.Begin()
+	tx.Commit()
+
+	fmt.Println("CommitCalled =", commitCalled)
+	fmt.Println("RollbackCalled =", rollbackCalled)
+
+	// Output:
+	// CommitCalled = true
+	// RollbackCalled = false
+}
+
+func ExampleSetCommitFunc() {
+	defer Reset()
+
+	SetCommitFunc(func() error {
+		return errors.New("commit failed")
+	})
+
+	db, _ := sql.Open("testdb", "")
+	tx, _ := db.Begin()
+
+	fmt.Println("CommitResult =", tx.Commit())
+
+	// Output:
+	// CommitResult = commit failed
+}
+
+func ExampleSetRollbackFunc() {
+	defer Reset()
+
+	SetRollbackFunc(func() error {
+		return errors.New("rollback failed")
+	})
+
+	db, _ := sql.Open("testdb", "")
+	tx, _ := db.Begin()
+
+	fmt.Println("RollbackResult =", tx.Rollback())
+
+	// Output:
+	// RollbackResult = rollback failed
+}
