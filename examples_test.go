@@ -13,6 +13,7 @@ type user struct {
 	name    string
 	age     int64
 	created string
+	data    string
 }
 
 func ExampleSetOpenFunc() {
@@ -199,12 +200,12 @@ func ExampleSetQueryWithArgsFunc() {
 	// joe - 25
 }
 
-type testResult struct{
-	lastId int64
+type testResult struct {
+	lastId       int64
 	affectedRows int64
 }
 
-func (r testResult) LastInsertId() (int64, error){
+func (r testResult) LastInsertId() (int64, error) {
 	return r.lastId, nil
 }
 

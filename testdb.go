@@ -131,9 +131,12 @@ func Conn() driver.Conn {
 	return d.conn
 }
 
-func RowsFromCSVString(columns []string, s string) driver.Rows {
+func RowsFromCSVString(columns []string, s string, c ...rune) driver.Rows {
 	r := strings.NewReader(strings.TrimSpace(s))
 	csvReader := csv.NewReader(r)
+	if len(c) > 0 {
+		csvReader.Comma = c[0]
+	}
 
 	rows := [][]driver.Value{}
 	for {
