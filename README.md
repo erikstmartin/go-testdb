@@ -48,6 +48,23 @@ testdb.StubQuery(sql, RowsFromCSVString(columns, result))
 res, err := db.Query(sql)
 </pre>
 
+If for some reason you need to specify another rune to split the columns, you can do it passing the rune that you want to use as `Comma` character as third argument to RowsFromCSVString
+
+<pre>
+db, _ := sql.Open("testdb", "")
+
+sql := "select id, name, age, data from users"
+columns := []string{"id", "name", "age", "data", "created"}
+result := `
+1|tim|20|part_1,part_2,part_3|2014-10-16 15:01:00
+2|joe|25|part_4,part_5,part_6|2014-10-17 15:01:01
+3|bob|30|part_7,part_8,part_9|2014-10-18 15:01:02
+`
+testdb.StunQuery(sql, RowsFromCSVString(columns, result, '|'))
+
+res, err := db.Query(sql)
+</pre>
+
 ## Stubbing Query function
 Some times you need more control over Query being run, maybe you need to assert whether or not a particular query is run.
 

@@ -13,6 +13,7 @@ type user struct {
 	name    string
 	age     int64
 	created string
+	data    string
 }
 
 func ExampleSetOpenFunc() {

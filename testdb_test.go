@@ -222,6 +222,47 @@ func TestStubQueryMultipleResult(t *testing.T) {
 	}
 }
 
+func TestStubQueryMultipleResultWithCustomComma(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	sql := "select id, name, age from users"
+	columns := []string{"id", "name", "age", "data", "created"}
+	result := `
+  1|tim|20|part_1,part_2,part_3|2014-10-16 15:01:00
+  2|joe|25|part_4,part_5,part_6|2014-10-17 15:01:01
+  3|bob|30|part_7,part_8,part_9|2014-10-18 15:01:02
+  `
+	StubQuery(sql, RowsFromCSVString(columns, result, '|'))
+
+	res, err := db.Query(sql)
+
+	if err != nil {
+		t.Fatal("stubbed query should not return error")
+	}
+
+	i := 0
+
+	for res.Next() {
+		var u = user{}
+		err = res.Scan(&u.id, &u.name, &u.age, &u.data, &u.created)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if u.id == 0 || u.name == "" || u.age == 0 || u.data == "" || u.created == "" {
+			t.Fatal("failed to populate object with result")
+		}
+		i++
+	}
+
+	if i != 3 {
+		t.Fatal("failed to return proper number of results")
+	}
+}
+
 func TestStubQueryMultipleResultNewline(t *testing.T) {
 	defer Reset()
 
