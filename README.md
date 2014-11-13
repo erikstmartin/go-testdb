@@ -72,10 +72,10 @@ You can return either a driver.Rows for response (your own or utilize RowsFromCS
 <pre>
 testdb.SetQueryFunc(func(query string) (result driver.Rows, err error) {
 	columns := []string{"id", "name", "age", "created"}
-	result := `
+	rows := `
 1,tim,20,2012-10-01 01:00:01
 2,joe,25,2012-10-02 02:00:02
-3,bob,30,2012-10-03 03:00:03
+3,bob,30,2012-10-03 03:00:03`
 
 	// inspect query to ensure it matches a pattern, or anything else you want to do first
 	return RowsFromCSVString(columns, rows), nil
