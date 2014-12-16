@@ -58,7 +58,7 @@ func (c *conn) Prepare(query string) (driver.Stmt, error) {
 		}
 	}
 
-	if !(s.queryFunc == nil || s.execFunc == nil) {
+	if s.queryFunc == nil && s.execFunc == nil {
 		return new(stmt), errors.New("Query not stubbed: " + query)
 	}
 
