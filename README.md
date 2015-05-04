@@ -22,7 +22,7 @@ db, _ := sql.Open("testdb", "")
 You're able to set your own function to execute when the sql library calls sql.Open
 <pre>
 testdb.SetOpen(func(dsn string) (driver.Conn, error) {
-	return c, errors.New("failed to connect")
+	return testdb.Connection(dsn), errors.New("failed to connect")
 })
 </pre>
 
@@ -43,7 +43,7 @@ result := `
 2,joe,25,2012-10-02 02:00:02
 3,bob,30,2012-10-03 03:00:03
 `
-testdb.StubQuery(sql, RowsFromCSVString(columns, result))
+testdb.StubQuery(sql, testdb.RowsFromCSVString(columns, result))
 
 res, err := db.Query(sql)
 </pre>
@@ -60,7 +60,7 @@ result := `
 2|joe|25|part_4,part_5,part_6|2014-10-17 15:01:01
 3|bob|30|part_7,part_8,part_9|2014-10-18 15:01:02
 `
-testdb.StunQuery(sql, RowsFromCSVString(columns, result, '|'))
+testdb.StubQuery(sql, testdb.RowsFromCSVString(columns, result, '|'))
 
 res, err := db.Query(sql)
 </pre>
@@ -78,7 +78,7 @@ testdb.SetQueryFunc(func(query string) (result driver.Rows, err error) {
 3,bob,30,2012-10-03 03:00:03`
 
 	// inspect query to ensure it matches a pattern, or anything else you want to do first
-	return RowsFromCSVString(columns, rows), nil
+	return testdb.RowsFromCSVString(columns, rows), nil
 })
 
 db, _ := sql.Open("testdb", "")
@@ -143,6 +143,19 @@ testdb.SetExecWithArgsFunc(func(query string, args []driver.Value) (result drive
 db, _ := sql.Open("testdb", "")
 
 res, _ := db.Exec("UPDATE bar SET name = 'foo' WHERE name = ?", "joe")
+</pre>
+
+## Multiple Connections
+
+If you happen to need to support multiple connections, you can use the same API given a specific connection, like so (note the unique DSN):
+
+<pre>
+barDb, _ := sql.Open("testdb", "bar")
+fooDb, _ := sql.Open("testdb", "foo")
+
+...
+testdb.Connection("bar").StubQuery(...)
+testdb.Connection("foo").StubQuery(...)
 </pre>
 
 ## Reset

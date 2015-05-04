@@ -21,7 +21,7 @@ func ExampleSetOpenFunc() {
 
 	SetOpenFunc(func(dsn string) (driver.Conn, error) {
 		// Conn() will return the same internal driver.Conn being used by the driver
-		return Conn(), errors.New("test error")
+		return Connection(dsn), errors.New("test error")
 	})
 
 	// err only returns from this if it's an unknown driver, we are stubbing opening a connection
