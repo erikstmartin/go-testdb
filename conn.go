@@ -7,6 +7,7 @@ import (
 
 type conn struct {
 	queries      map[string]query
+	errorFunc    func() error
 	queryFunc    func(query string, args []driver.Value) (driver.Rows, error)
 	execFunc     func(query string, args []driver.Value) (driver.Result, error)
 	beginFunc    func() (driver.Tx, error)

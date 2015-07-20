@@ -144,6 +144,11 @@ func StubCommitError(err error) {
 	})
 }
 
+// Set your own function to be executed when rows.Next() is called.
+func SetErrorFunc(f func() error) {
+	d.conn.errorFunc = f
+}
+
 // Set your own function to be executed when tx.Rollback() is called on the default transcation. Conn() can be used to grab the global Conn object containing stubbed queries.
 func SetRollbackFunc(f func() error) {
 	d.conn.rollbackFunc = f
