@@ -127,6 +127,42 @@ func StubExecError(q string, err error) {
 	StubQueryError(q, err)
 }
 
+// Set your own function to be executed when db.Begin() is called. You can either hand back a valid transaction, or an error. Conn() can be used to grab the global Conn object containing stubbed queries.
+func SetBeginFunc(f func() (driver.Tx, error)) {
+	d.conn.beginFunc = f
+}
+
+// Stubs the global driver.Conn to return the supplied tx and error when db.Begin() is called.
+func StubBegin(tx driver.Tx, err error) {
+	SetBeginFunc(func() (driver.Tx, error) {
+		return tx, err
+	})
+}
+
+// Set your own function to be executed when tx.Commit() is called on the default transcation. Conn() can be used to grab the global Conn object containing stubbed queries.
+func SetCommitFunc(f func() error) {
+	d.conn.commitFunc = f
+}
+
+// Stubs the default transaction to return the supplied error when tx.Commit() is called.
+func StubCommitError(err error) {
+	SetCommitFunc(func() error {
+		return err
+	})
+}
+
+// Set your own function to be executed when tx.Rollback() is called on the default transcation. Conn() can be used to grab the global Conn object containing stubbed queries.
+func SetRollbackFunc(f func() error) {
+	d.conn.rollbackFunc = f
+}
+
+// Stubs the default transaction to return the supplied error when tx.Rollback() is called.
+func StubRollbackError(err error) {
+	SetRollbackFunc(func() error {
+		return err
+	})
+}
+
 // Clears all stubbed queries, and replaced functions.
 func Reset() {
 	d.conn = newConn()
@@ -138,9 +174,12 @@ func Conn() driver.Conn {
 	return d.conn
 }
 
-func RowsFromCSVString(columns []string, s string) driver.Rows {
+func RowsFromCSVString(columns []string, s string, c ...rune) driver.Rows {
 	r := strings.NewReader(strings.TrimSpace(s))
 	csvReader := csv.NewReader(r)
+	if len(c) > 0 {
+		csvReader.Comma = c[0]
+	}
 
 	rows := [][]driver.Value{}
 	for {

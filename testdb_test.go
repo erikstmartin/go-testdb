@@ -223,6 +223,47 @@ func TestStubQueryMultipleResult(t *testing.T) {
 	}
 }
 
+func TestStubQueryMultipleResultWithCustomComma(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	sql := "select id, name, age from users"
+	columns := []string{"id", "name", "age", "data", "created"}
+	result := `
+  1|tim|20|part_1,part_2,part_3|2014-10-16 15:01:00
+  2|joe|25|part_4,part_5,part_6|2014-10-17 15:01:01
+  3|bob|30|part_7,part_8,part_9|2014-10-18 15:01:02
+  `
+	StubQuery(sql, RowsFromCSVString(columns, result, '|'))
+
+	res, err := db.Query(sql)
+
+	if err != nil {
+		t.Fatal("stubbed query should not return error")
+	}
+
+	i := 0
+
+	for res.Next() {
+		var u = user{}
+		err = res.Scan(&u.id, &u.name, &u.age, &u.data, &u.created)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if u.id == 0 || u.name == "" || u.age == 0 || u.data == "" || u.created == "" {
+			t.Fatal("failed to populate object with result")
+		}
+		i++
+	}
+
+	if i != 3 {
+		t.Fatal("failed to return proper number of results")
+	}
+}
+
 func TestStubQueryMultipleResultNewline(t *testing.T) {
 	defer Reset()
 
@@ -635,5 +676,142 @@ func TestEnableTimeParsingWithFormat(t *testing.T) {
 
 	if u.created.Format("2006-01-02 15:04:05") != "2012-10-01 01:00:01" {
 		t.Fatal("failed to populate time object with result")
+	}
+}
+
+func TestSetBeginFunc(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	SetBeginFunc(func() (driver.Tx, error) {
+		return nil, errors.New("begin failed")
+	})
+
+	res, err := db.Begin()
+
+	if res != nil {
+		t.Fatal("stubbed begin unexpected result")
+	}
+
+	if err == nil || err.Error() != "begin failed" {
+		t.Fatal("stubbed begin did not return expected error")
+	}
+}
+
+func TestStubBegin(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	StubBegin(nil, errors.New("begin failed"))
+	res, err := db.Begin()
+
+	if res != nil {
+		t.Fatal("stubbed begin unexpected result")
+	}
+
+	if err == nil || err.Error() != "begin failed" {
+		t.Fatal("stubbed begin did not return expected error")
+	}
+}
+
+func TestSetCommitFunc(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	SetCommitFunc(func() error {
+		return errors.New("commit failed")
+	})
+
+	tx, err := db.Begin()
+
+	if tx == nil {
+		t.Fatal("begin expected result")
+	}
+
+	if err != nil {
+		t.Fatal("begin returned unexpected error")
+	}
+
+	err = tx.Commit()
+
+	if err == nil || err.Error() != "commit failed" {
+		t.Fatal("stubbed commit did not return expected error")
+	}
+}
+
+func TestStubCommitError(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	StubCommitError(errors.New("commit failed"))
+
+	tx, err := db.Begin()
+
+	if tx == nil {
+		t.Fatal("begin expected result")
+	}
+
+	if err != nil {
+		t.Fatal("begin returned unexpected error")
+	}
+
+	err = tx.Commit()
+
+	if err == nil || err.Error() != "commit failed" {
+		t.Fatal("stubbed commit did not return expected error")
+	}
+}
+
+func TestSetRollbackFunc(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	SetRollbackFunc(func() error {
+		return errors.New("rollback failed")
+	})
+
+	tx, err := db.Begin()
+
+	if tx == nil {
+		t.Fatal("begin expected result")
+	}
+
+	if err != nil {
+		t.Fatal("begin returned unexpected error")
+	}
+
+	err = tx.Rollback()
+
+	if err == nil || err.Error() != "rollback failed" {
+		t.Fatal("stubbed rollback did not return expected error")
+	}
+}
+
+func TestStubRollbackError(t *testing.T) {
+	defer Reset()
+
+	db, _ := sql.Open("testdb", "")
+
+	StubRollbackError(errors.New("rollback failed"))
+
+	tx, err := db.Begin()
+
+	if tx == nil {
+		t.Fatal("begin expected result")
+	}
+
+	if err != nil {
+		t.Fatal("begin returned unexpected error")
+	}
+
+	err = tx.Rollback()
+
+	if err == nil || err.Error() != "rollback failed" {
+		t.Fatal("stubbed rollback did not return expected error")
 	}
 }
