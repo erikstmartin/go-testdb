@@ -43,7 +43,7 @@ result := `
 2,joe,25,2012-10-02 02:00:02
 3,bob,30,2012-10-03 03:00:03
 `
-testdb.StubQuery(sql, RowsFromCSVString(columns, result))
+testdb.StubQuery(sql, testdb.RowsFromCSVString(columns, result))
 
 res, err := db.Query(sql)
 </pre>
