@@ -12,7 +12,7 @@ func TestSetOpenFunc(t *testing.T) {
 	defer Reset()
 
 	SetOpenFunc(func(dsn string) (driver.Conn, error) {
-		return Conn(), errors.New("test error")
+		return Connection(dsn), errors.New("test error")
 	})
 
 	// err only returns from this if it's an unknown driver, we are stubbing opening a connection
@@ -311,7 +311,7 @@ func TestSetQueryFunc(t *testing.T) {
 		return RowsFromCSVString(columns, rows), nil
 	})
 
-	if Conn().(*conn).queryFunc == nil {
+	if DefaultConnection().queryFunc == nil {
 		t.Fatal("query function not stubbed")
 	}
 
@@ -368,7 +368,7 @@ func TestReset(t *testing.T) {
 
 	Reset()
 
-	if len(d.conn.queries) > 0 {
+	if len(DefaultConnection().queries) > 0 {
 		t.Fatal("failed to reset connection")
 	}
 }
@@ -445,7 +445,7 @@ func TestSetQueryFuncRow(t *testing.T) {
 		return RowsFromCSVString(columns, rows), nil
 	})
 
-	if Conn().(*conn).queryFunc == nil {
+	if DefaultConnection().queryFunc == nil {
 		t.Fatal("query function not stubbed")
 	}
 
@@ -472,7 +472,7 @@ func TestSetQueryFuncRowError(t *testing.T) {
 		return nil, errors.New("Stubbed error")
 	})
 
-	if Conn().(*conn).queryFunc == nil {
+	if DefaultConnection().queryFunc == nil {
 		t.Fatal("query function not stubbed")
 	}
 
@@ -723,5 +723,55 @@ func TestStubRollbackError(t *testing.T) {
 
 	if err == nil || err.Error() != "rollback failed" {
 		t.Fatal("stubbed rollback did not return expected error")
+	}
+}
+
+func TestMultipleConnections(t *testing.T) {
+	defer Reset()
+	var count int64
+
+	barDb, _ := sql.Open("testdb", "bar")
+	fooDb, _ := sql.Open("testdb", "foo")
+
+	sql := "select count(*) from foo"
+	columns := []string{"count"}
+	Connection("bar").StubQuery(sql, RowsFromCSVString(columns, "5"))
+	Connection("foo").StubQuery(sql, RowsFromCSVString(columns, "12"))
+
+	barRes, err := barDb.Query(sql)
+
+	if err != nil {
+		t.Fatal("stubbed query should not return error")
+	}
+
+	if barRes.Next() {
+		err = barRes.Scan(&count)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if count != 5 {
+			t.Fatal("failed to return count")
+		}
+	}
+
+	fooRes, err := fooDb.Query(sql)
+
+	if err != nil {
+		t.Fatal("stubbed query should not return error")
+	}
+
+	if fooRes.Next() {
+		var count int64
+		err = fooRes.Scan(&count)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if count != 12 {
+			t.Fatal("failed to return count")
+		}
 	}
 }
