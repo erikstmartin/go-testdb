@@ -145,6 +145,27 @@ db, _ := sql.Open("testdb", "")
 res, _ := db.Exec("UPDATE bar SET name = 'foo' WHERE name = ?", "joe")
 </pre>
 
+## Stubbing Prepared Statements
+You can use the same methods as `SetQueryFunc`, `SetQueryWithArgsFunc` for Prepared Statements
+
+<pre>
+testdb.SetQueryFunc(func(query string) (result driver.Rows, err error) {
+	columns := []string{"id", "name", "age", "created"}
+	rows := `
+1,tim,20,2012-10-01 01:00:01
+2,joe,25,2012-10-02 02:00:02
+3,bob,30,2012-10-03 03:00:03`
+
+	// inspect query to ensure it matches a pattern, or anything else you want to do first
+	return RowsFromCSVString(columns, rows), nil
+})
+
+db, _ := sql.Open("testdb", "")
+
+stmt, _ := db.Prepare("SELECT foo FROM bar")
+res, err := stmt.Query("SELECT foo FROM bar")
+</pre>
+
 ## Reset
 At any point in your test, or as a defer you can remove all stubbed queries, errors, custom set Query or Open functions by calling the reset method.
 
@@ -156,7 +177,6 @@ func TestMyDatabase(t *testing.T){
 
 #### TODO
 Feel free to contribute and send pull requests
-- Prepared Statements
 - Transactions
 
 #### License
