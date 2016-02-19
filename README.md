@@ -21,7 +21,7 @@ db, _ := sql.Open("testdb", "")
 ## Stubbing connection failure
 You're able to set your own function to execute when the sql library calls sql.Open
 <pre>
-testdb.SetOpen(func(dsn string) (driver.Conn, error) {
+testdb.SetOpenFunc(func(dsn string) (driver.Conn, error) {
 	return c, errors.New("failed to connect")
 })
 </pre>
