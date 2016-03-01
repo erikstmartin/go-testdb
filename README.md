@@ -60,7 +60,7 @@ result := `
 2|joe|25|part_4,part_5,part_6|2014-10-17 15:01:01
 3|bob|30|part_7,part_8,part_9|2014-10-18 15:01:02
 `
-testdb.StunQuery(sql, RowsFromCSVString(columns, result, '|'))
+testdb.StubQuery(sql, testdb.RowsFromCSVString(columns, result, '|'))
 
 res, err := db.Query(sql)
 </pre>
@@ -78,7 +78,7 @@ testdb.SetQueryFunc(func(query string) (result driver.Rows, err error) {
 3,bob,30,2012-10-03 03:00:03`
 
 	// inspect query to ensure it matches a pattern, or anything else you want to do first
-	return RowsFromCSVString(columns, rows), nil
+	return testdb.RowsFromCSVString(columns, rows), nil
 })
 
 db, _ := sql.Open("testdb", "")
@@ -157,7 +157,7 @@ testdb.SetQueryFunc(func(query string) (result driver.Rows, err error) {
 3,bob,30,2012-10-03 03:00:03`
 
 	// inspect query to ensure it matches a pattern, or anything else you want to do first
-	return RowsFromCSVString(columns, rows), nil
+	return testdb.RowsFromCSVString(columns, rows), nil
 })
 
 db, _ := sql.Open("testdb", "")
