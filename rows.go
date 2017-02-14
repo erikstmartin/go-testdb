@@ -32,6 +32,10 @@ func (rs *rows) Next(dest []driver.Value) error {
 		dest[i] = col
 	}
 
+	if d.conn.errorFunc != nil {
+		return d.conn.errorFunc()
+	}
+
 	return nil
 }
 
